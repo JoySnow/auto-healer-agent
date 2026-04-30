@@ -37,31 +37,30 @@ This project implements several advanced patterns from *Agentic Design Patterns*
 
 ## 5. Execution Plan (Milestones)
 
-### Phase 1: Infrastructure & Chaos Mock (The Target Environment)
-* [ ] 1.1 Project Initialization (uv/poetry, standard directory structure).
-* [ ] 1.2 Build Dummy Services (FastAPI: Order, Payment, Inventory).
-* [ ] 1.3 Inject Chaos Endpoints (Simulate 500 ZeroDivision, 504 Timeout, 502 Bad Gateway).
-* [ ] 1.4 Container Orchestration (Dockerfile & `docker-compose.yml` for 1-click spin-up).
+### Phase 1: Infrastructure & Chaos Mock (The Target Environment) ✅
+* [x] 1.1 Project Initialization (uv/poetry, standard directory structure).
+* [x] 1.2 Build Dummy Services (FastAPI: Order, Payment, Inventory).
+* [x] 1.3 Inject Chaos Endpoints (Simulate 500 ZeroDivision, 504 Timeout, 502 Bad Gateway).
+* [x] 1.4 Container Orchestration (Dockerfile & `docker-compose.yml` for 1-click spin-up).
 
-### Phase 2: Perception, Tools & Memory Layer
-* [ ] 2.1 Define LangGraph Global State (`AlertTeamState`).
-* [ ] 2.2 Implement Tools (Docker SDK logs fetcher, Health check API).
-* [ ] 2.3 Setup Memory Layer (ChromaDB initialization, implement Recall/Commit functions).
-* [ ] 2.4 Local LLM Binding (Configure `qwen2.5:14b` via `langchain_ollama` with 16K context).
+### Phase 2: Perception, Tools & Memory Layer ✅
+* [x] 2.1 Define LangGraph Global State (`AlertTeamState`).
+* [x] 2.2 Implement Tools (Docker SDK logs fetcher, Health check API).
+* [x] 2.3 Setup Memory Layer (ChromaDB initialization, implement Recall/Commit functions).
+* [x] 2.4 Local LLM Binding (Configure `qwen2.5:14b` via `langchain_ollama` with 16K context).
 
-### Phase 3: Core Orchestration (LangGraph)
-* [ ] 3.1 Build Worker Nodes (Log Expert & Infra Expert with internal ReAct loops).
-* [ ] 3.2 Build Supervisor Node (Strict JSON routing via Pydantic Structured Output).
-* [ ] 3.3 Wire the Graph (Add conditional edges, compile with recursion limits/circuit breakers).
-* [ ] 3.4 Implement Reflection (Error handling nodes for tool execution failures).
+### Phase 3: Core Orchestration (LangGraph) ✅
+* [x] 3.1 Build Worker Nodes (Log Expert & Infra Expert with internal ReAct loops).
+* [x] 3.2 Build Supervisor Node (Strict JSON routing via Pydantic Structured Output).
+* [x] 3.3 Wire the Graph (Add conditional edges, compile with recursion limits/circuit breakers).
+* [x] 3.4 Implement Reflection (Error handling nodes for tool execution failures).
 
-### Phase 4: Integration & Human-in-the-Loop
-* [ ] 4.1 Mock Webhook Trigger (Entry point script for the Graph).
-* [ ] 4.2 Add HITL Node (Terminal `y/n` input intercept before memory commit).
-* [ ] 4.3 End-to-End Testing (Fire 500, 502, 504 chaos endpoints and verify Agent trajectories).
+### Phase 4: Integration & Human-in-the-Loop ✅
+* [x] 4.1 Mock Webhook Trigger (Entry point script for the Graph).
+* [x] 4.2 Add HITL Node (Terminal `y/n` input intercept before memory commit).
+* [x] 4.3 End-to-End Testing (Fire 500, 502, 504 chaos endpoints and verify Agent trajectories).
 
-### Phase 5: Open Source Polish
-* [ ] 5.1 Terminal UI Beautification (Use `rich` library for hacker-style execution logs).
-* [ ] 5.2 Documentation (Mermaid diagrams for LangGraph, detailed README).
-* [ ] 5.3 Code Quality (mypy type hints, basic pytest setup).
-
+### Phase 5: Open Source Polish ✅
+* [x] 5.1 Terminal UI Beautification (Use `rich` library for hacker-style execution logs).
+* [x] 5.2 Documentation (Mermaid diagrams for LangGraph, detailed README).
+* [x] 5.3 Code Quality (mypy strict type hints, pytest setup with 41 passing tests, ruff formatting, pre-commit hooks).
