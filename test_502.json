@@ -1,0 +1,7 @@
+{
+  "service": "order-service",
+  "status_code": 502,
+  "timestamp": "2024-04-30T10:32:00Z",
+  "error_message": "Bad Gateway",
+  "chaos_type": "502_bad_gateway"
+}

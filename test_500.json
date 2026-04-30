@@ -1,0 +1,7 @@
+{
+  "service": "order-service",
+  "status_code": 500,
+  "timestamp": "2024-04-30T10:30:00Z",
+  "error_message": "Internal Server Error",
+  "chaos_type": "500_zerodivision"
+}

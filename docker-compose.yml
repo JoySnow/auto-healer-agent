@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  order:
+    build: ./dummy_services/order
+    container_name: order-service
+    ports:
+      - "8001:8001"
+    environment:
+      - PAYMENT_URL=http://payment:8002
+      - INVENTORY_URL=http://inventory:8003
+    depends_on:
+      - payment
+      - inventory
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  payment:
+    build: ./dummy_services/payment
+    container_name: payment-service
+    ports:
+      - "8002:8002"
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  inventory:
+    build: ./dummy_services/inventory
+    container_name: inventory-service
+    ports:
+      - "8003:8003"
+    networks:
+      - microservices
+    restart: unless-stopped
+
+networks:
+  microservices:
+    driver: bridge

@@ -1,0 +1,7 @@
+{
+  "service": "order-service",
+  "status_code": 504,
+  "timestamp": "2024-04-30T10:31:00Z",
+  "error_message": "Gateway Timeout",
+  "chaos_type": "504_gateway_timeout"
+}
