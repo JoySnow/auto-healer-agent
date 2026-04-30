@@ -2,17 +2,17 @@
 
 ## Summary
 
-**Status**: ⚠️ Circuit Breaker Triggered  
-**Date**: 2026-04-30  
+**Status**: ⚠️ Circuit Breaker Triggered
+**Date**: 2026-04-30
 **Test Type**: Multi-Agent Collaboration & Circuit Breaker Validation
 
 ---
 
 ## Test Scenario
 
-**Alert**: `examples/alerts/alert_502_bad_gateway.json`  
-**Service**: order-service  
-**Error Type**: 502 Bad Gateway  
+**Alert**: `examples/alerts/alert_502_bad_gateway.json`
+**Service**: order-service
+**Error Type**: 502 Bad Gateway
 **Root Cause**: Simulated upstream service failure (HTTPException)
 
 ```python
@@ -41,9 +41,9 @@ raise HTTPException(status_code=502, detail="Bad Gateway - Upstream service fail
 | 9-13 | Multiple | Continued alternating between agents |
 | **14** | **Circuit Breaker** | **Recursion limit reached (15 iterations)** |
 
-**Workers Consulted**: 13  
-**Total Duration**: ~6 minutes  
-**LLM Calls**: 14+  
+**Workers Consulted**: 13
+**Total Duration**: ~6 minutes
+**LLM Calls**: 14+
 **Tool Calls**: 8+ (fetch_service_logs, check_container_health)
 
 ---
@@ -76,7 +76,7 @@ The Supervisor correctly:
 [17:35:08] Supervisor decision: infra_expert
 Reasoning: 502 Bad Gateway typically indicates an issue with upstream services or infrastructure.
 
-[17:35:43] Supervisor decision: log_expert  
+[17:35:43] Supervisor decision: log_expert
 Reasoning: Initial infrastructure check shows no immediate issues; further analysis of logs for connection errors is needed.
 
 [17:40:40] Supervisor decision: infra_expert

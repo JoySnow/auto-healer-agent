@@ -141,6 +141,40 @@ View logs to see the generated errors:
 podman logs order-service
 ```
 
+## 📚 Learning Path
+
+Want to learn how this was built? We've created a comprehensive **5-phase tutorial series** (16-24 hours) that teaches you to build production-ready multi-agent AI systems from scratch.
+
+**[→ Start Learning: Phase 1 Tutorial](tutorials/README.md)**
+
+**What You'll Learn**:
+- Build multi-agent AI systems with LangGraph
+- Implement RAG memory with ChromaDB
+- Configure local LLMs (Ollama, qwen2.5:14b)
+- Design specialized AI agents (Supervisor-Worker pattern)
+- Test and debug autonomous agents
+- Deploy production-ready AI applications
+
+**Tutorial Series**:
+- 📖 [Phase 1: Infrastructure & Testing Environment](tutorials/LESSON_PHASE1.md) (2-3 hours)
+- 📖 [Phase 2: Perception, Tools & Memory](tutorials/LESSON_PHASE2.md) (3-4 hours)
+- 📖 [Phase 3: Multi-Agent Orchestration](tutorials/LESSON_PHASE3.md) (4-5 hours)
+- 📖 [Phase 4: Integration Testing & HITL](tutorials/LESSON_PHASE4.md) (4-6 hours)
+- 📖 [Phase 5: Production Polish](tutorials/LESSON_PHASE5.md) (3-4 hours)
+- 📖 [Summary: Key Architectural Decisions](tutorials/SUMMARY.md) (30 min)
+
+**Includes**:
+- ✅ Step-by-step implementation (all 5 phases)
+- ✅ Real bugs discovered & solutions
+- ✅ Performance metrics & trade-offs
+- ✅ Validation checkpoints at each step
+- ✅ Hands-on exercises
+
+**Prerequisites**: Python 3.12+, Docker, Ollama
+**Time Commitment**: 16-24 hours (beginner to advanced)
+
+See [tutorials/README.md](tutorials/README.md) for the complete learning path.
+
 ## Project Structure
 
 ```
@@ -165,10 +199,26 @@ auto-healer-agent/
 ├── examples/              # Sample alerts and data
 │   └── alerts/
 │
+├── tutorials/             # Educational lesson series
+│   ├── README.md          # Learning path overview
+│   ├── LESSON_PHASE1.md   # Phase 1: Infrastructure
+│   ├── LESSON_PHASE2.md   # Phase 2: Tools & Memory
+│   ├── LESSON_PHASE3.md   # Phase 3: Multi-Agent
+│   ├── LESSON_PHASE4.md   # Phase 4: Integration
+│   ├── LESSON_PHASE5.md   # Phase 5: Production
+│   └── SUMMARY.md         # Architectural decisions
+│
 ├── docs/                  # Documentation
-│   ├── BLUEPRINT.md
 │   ├── ARCHITECTURE.md
-│   └── TESTING.md
+│   ├── AGENT_SPEC.md
+│   ├── BLUEPRINT.md
+│   ├── development/       # Development documentation
+│   │   ├── PROGRESS.md
+│   │   └── SUPERVISOR_IMPROVEMENTS.md
+│   └── testing/           # Test results
+│       ├── TESTING.md
+│       ├── PHASE4_502_TEST.md
+│       └── PHASE4_RESULTS.md
 │
 └── tests/                 # Unit tests
 ```
@@ -206,11 +256,22 @@ See [docs/BLUEPRINT.md](docs/BLUEPRINT.md) for the complete development plan and
 
 ## Documentation
 
-- [AGENT.md](AGENT.md) - AI coding assistant guidelines
-- [docs/BLUEPRINT.md](docs/BLUEPRINT.md) - Project execution plan
+### Core Documentation
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Architecture decisions and rationale
 - [docs/AGENT_SPEC.md](docs/AGENT_SPEC.md) - Agent personas and specifications
-- [docs/TESTING.md](docs/TESTING.md) - Infrastructure testing results
+- [docs/BLUEPRINT.md](docs/BLUEPRINT.md) - Project execution plan
+
+### Learning Resources
+- [tutorials/](tutorials/) - Complete 5-phase tutorial series (16-24 hours)
+- [tutorials/SUMMARY.md](tutorials/SUMMARY.md) - Key architectural decisions & trade-offs
+
+### Development
+- [docs/development/PROGRESS.md](docs/development/PROGRESS.md) - Development progress tracking
+- [docs/development/SUPERVISOR_IMPROVEMENTS.md](docs/development/SUPERVISOR_IMPROVEMENTS.md) - Supervisor agent enhancements
+
+### Testing
+- [docs/testing/TESTING.md](docs/testing/TESTING.md) - Infrastructure testing results
+- [docs/testing/PHASE4_RESULTS.md](docs/testing/PHASE4_RESULTS.md) - Phase 4 integration test results
 
 ## Hardware Requirements
 
@@ -323,4 +384,4 @@ MIT License - see LICENSE file for details
   - ✅ Code formatting (ruff)
   - ✅ Pre-commit hooks configured
   - ✅ Comprehensive documentation
-  - 📚 Educational lesson series (planned)
+  - ✅ Educational lesson series (complete - see [tutorials/](tutorials/))

@@ -4,7 +4,7 @@
 
 Implemented per-agent consultation budgets and improved supervisor decision logic to prevent infinite loops in ambiguous investigation scenarios.
 
-**Date**: 2026-04-30  
+**Date**: 2026-04-30
 **Phase**: Phase 4 Completion
 
 ---
@@ -98,7 +98,7 @@ Updated `SUPERVISOR_SYSTEM_PROMPT` to guide better FINISH decisions:
 - After both specialists have reported their findings AND provided specific conclusions
 - When specialists find no critical issues and container/logs are healthy (INCONCLUSIVE is valid)
 - When evidence has plateaued (repeated consultations yield no new information)
-- IMPORTANT: If both log_expert and infra_expert find "no immediate issues" or "container healthy", 
+- IMPORTANT: If both log_expert and infra_expert find "no immediate issues" or "container healthy",
   you should FINISH with an inconclusive summary rather than continuing to loop
 
 **Recognizing Inconclusive Scenarios:**
@@ -167,7 +167,7 @@ Iteration 7: Supervisor FORCED FINISH → "Investigation budget exhausted"
 **Final Supervisor Message:**
 ```
 Next: FINISH
-Reasoning: Investigation budget exhausted (log_expert: 3, infra_expert: 3). 
+Reasoning: Investigation budget exhausted (log_expert: 3, infra_expert: 3).
 Proceeding to Human-in-the-Loop with findings gathered so far.
 ```
 
@@ -241,19 +241,19 @@ MAX_AGENT_CONSULTATIONS = 3  # Increase for more thorough investigations
 ## Known Limitations
 
 ### 1. Fixed Budget (Not Adaptive)
-**Current**: All scenarios get 3 consultations per agent  
+**Current**: All scenarios get 3 consultations per agent
 **Future**: Could adjust budget based on error type or evidence quality
 
 ### 2. No Consultation Quality Metric
-**Current**: All consultations count equally  
+**Current**: All consultations count equally
 **Future**: Could weight consultations by novelty of findings
 
 ### 3. Budget Shared Across Iterations
-**Current**: 3 total log_expert calls regardless of when  
+**Current**: 3 total log_expert calls regardless of when
 **Future**: Could reset budget if new evidence emerges
 
 ### 4. No HITL Earlier for Edge Cases
-**Current**: Runs full budget before HITL  
+**Current**: Runs full budget before HITL
 **Future**: Could offer "stuck? Ask human" at iteration 5-7
 
 ---

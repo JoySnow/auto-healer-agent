@@ -253,27 +253,27 @@ from auto_healer.tools.docker_tools import fetch_service_logs, check_container_h
 
 class TestFetchServiceLogs:
     """Test suite for fetch_service_logs function."""
-    
+
     @patch('auto_healer.tools.docker_tools.docker.from_env')
     def test_fetch_logs_success(self, mock_docker):
         """Test successful log fetching."""
         # Setup mock
         mock_container = Mock()
         mock_container.logs.return_value = b"2024-04-30 Log line 1\n2024-04-30 Log line 2"
-        
+
         mock_client = Mock()
         mock_client.containers.get.return_value = mock_container
         mock_docker.return_value = mock_client
-        
+
         # Execute
         result = fetch_service_logs("order-service", tail_lines=50)
-        
+
         # Assert
         assert "Log line 1" in result
         assert "Log line 2" in result
         mock_client.containers.get.assert_called_once_with("order-service")
         mock_container.logs.assert_called_once_with(tail=50, timestamps=True, since=None)
-    
+
     @patch('auto_healer.tools.docker_tools.docker.from_env')
     def test_fetch_logs_container_not_found(self, mock_docker):
         """Test error handling when container doesn't exist."""
@@ -285,10 +285,10 @@ class TestFetchServiceLogs:
             Mock(name="inventory-service")
         ]
         mock_docker.return_value = mock_client
-        
+
         # Execute
         result = fetch_service_logs("nonexistent-service")
-        
+
         # Assert
         assert "Error: Container 'nonexistent-service' not found" in result
         assert "payment-service" in result  # Available containers listed
@@ -297,7 +297,7 @@ class TestFetchServiceLogs:
 
 class TestCheckContainerHealth:
     """Test suite for check_container_health function."""
-    
+
     @patch('auto_healer.tools.docker_tools.docker.from_env')
     def test_check_health_running_container(self, mock_docker):
         """Test health check for running container."""
@@ -321,14 +321,14 @@ class TestCheckContainerHealth:
                 'limit': 512 * 1024 * 1024   # 512 MB
             }
         }
-        
+
         mock_client = Mock()
         mock_client.containers.get.return_value = mock_container
         mock_docker.return_value = mock_client
-        
+
         # Execute
         result = check_container_health("order-service")
-        
+
         # Assert
         assert "Status: RUNNING" in result
         assert "OOM Killed: False" in result
@@ -363,14 +363,14 @@ def test_save_and_query_incident(temp_chromadb):
     # Save test incident
     rca = "Root cause: ZeroDivisionError at /app/app.py:84"
     alert_info = {"service": "order-service", "status_code": 500}
-    
+
     success = save_incident(rca, alert_info)
     assert success is True
-    
+
     # Query for similar incident
     similar_alert = {"service": "order-service", "status_code": 500, "error_message": "Division error"}
     results = query_past_incidents(similar_alert, top_k=1)
-    
+
     # Assert
     assert "ZeroDivisionError" in results
     assert "/app/app.py:84" in results
@@ -380,7 +380,7 @@ def test_query_empty_memory(temp_chromadb):
     """Test querying when memory is empty."""
     alert_info = {"service": "order-service", "status_code": 500}
     results = query_past_incidents(alert_info, top_k=3)
-    
+
     assert "No similar past incidents found" in results
 ```
 
@@ -404,12 +404,12 @@ def test_supervisor_routes_500_to_log_expert():
         "historical_context": "",
         "agent_consultation_count": {"log_expert": 0, "infra_expert": 0}
     }
-    
+
     # Mock LLM to return log_expert decision
     with patch('auto_healer.nodes.supervisor.get_llm') as mock_get_llm:
         mock_llm = Mock()
         mock_structured_llm = Mock()
-        
+
         # Mock structured output
         from auto_healer.nodes.supervisor import SupervisorDecision
         mock_decision = SupervisorDecision(
@@ -419,10 +419,10 @@ def test_supervisor_routes_500_to_log_expert():
         mock_structured_llm.invoke.return_value = mock_decision
         mock_llm.with_structured_output.return_value = mock_structured_llm
         mock_get_llm.return_value = mock_llm
-        
+
         # Execute
         result = supervisor_node(state)
-        
+
         # Assert
         assert result["next_worker"] == "log_expert"
 
@@ -436,10 +436,10 @@ def test_supervisor_forces_finish_when_budgets_exhausted():
         "historical_context": "",
         "agent_consultation_count": {"log_expert": 3, "infra_expert": 3}  # Both at limit
     }
-    
+
     # Execute (no need to mock LLM - should short-circuit)
     result = supervisor_node(state)
-    
+
     # Assert
     assert result["next_worker"] == "FINISH"
     assert "budget exhausted" in result["messages"][0].content.lower()
@@ -566,7 +566,7 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
       # Formatter
       - id: ruff-format
-  
+
   # Type checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
@@ -574,7 +574,7 @@ repos:
       - id: mypy
         additional_dependencies: [types-all]
         args: [--ignore-missing-imports]
-  
+
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
@@ -607,12 +607,12 @@ git commit -m "Test pre-commit"
 # ruff.....................................................................Failed
 # - hook id: ruff
 # - exit code: 1
-# 
+#
 # Fixed 3 errors:
 # - Added missing whitespace
 # - Removed extra spaces
 # - Reformatted function definition
-# 
+#
 # ruff-format..............................................................Passed
 # mypy.....................................................................Passed
 # trailing-whitespace......................................................Passed
@@ -1238,9 +1238,9 @@ You've completed all 5 phases! 🎉
 
 **End of Phase 5 Lesson**
 
-✅ Type checking configured  
-✅ Unit tests written  
-✅ Code formatted  
-✅ Pre-commit hooks enabled  
-✅ Comprehensive README created  
+✅ Type checking configured
+✅ Unit tests written
+✅ Code formatted
+✅ Pre-commit hooks enabled
+✅ Comprehensive README created
 ✅ Project ready for production!

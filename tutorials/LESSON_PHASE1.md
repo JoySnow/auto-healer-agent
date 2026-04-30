@@ -4,7 +4,7 @@
 
 **What You'll Build**: Three FastAPI microservices (order, payment, inventory) with chaos injection endpoints, containerized with Docker.
 
-**Why It Matters**: 
+**Why It Matters**:
 - Agents need realistic targets to demonstrate value (can't hallucinate Docker SDK responses)
 - Controllable chaos injection enables deterministic testing
 - Proves agent can work with real-world containers, not just mocks
@@ -104,7 +104,7 @@ def create_order(chaos_type: Optional[str] = None):
         raise HTTPException(502, "Upstream service down")
     elif chaos_type == "504_gateway_timeout":
         time.sleep(60)  # Simulate timeout
-    
+
     # Normal path
     return {"order_id": str(uuid.uuid4()), "status": "success"}
 ```
@@ -148,7 +148,7 @@ def create_order(order_id: str):
         "timestamp": datetime.utcnow().isoformat(),
         "service": "order-service"
     }))
-    
+
     # Agent can now parse:
     # - What happened (order_received)
     # - Which order (order_id)
@@ -173,7 +173,7 @@ services:
     environment:
       - PAYMENT_URL=http://payment-service:8002  # Not localhost!
       - INVENTORY_URL=http://inventory-service:8003
-  
+
   payment-service:
     ports:
       - "8002:8002"
@@ -274,7 +274,7 @@ logger = logging.getLogger(__name__)
 # SERVICE DEPENDENCIES
 # ============================================================================
 
-# Why environment variables? 
+# Why environment variables?
 # - Docker Compose injects these
 # - Different values for dev vs production
 # - Service discovery via Docker network DNS
@@ -316,7 +316,7 @@ class OrderResponse(BaseModel):
 def log_event(event: str, **kwargs):
     """
     Log structured JSON event.
-    
+
     Why this helper?
     - Consistent log format across all events
     - Easy to add timestamp/service name
@@ -338,7 +338,7 @@ def log_event(event: str, **kwargs):
 def health_check():
     """
     Health check endpoint.
-    
+
     Why this matters:
     - Kubernetes/Docker health probes
     - Infrastructure Expert agent checks this
@@ -356,29 +356,29 @@ def create_order(
 ):
     """
     Create a new order.
-    
+
     CHAOS INJECTION:
     Controlled via `chaos_type` query parameter for deterministic testing.
-    
+
     Available chaos types:
     - 500_zerodivision: Python ZeroDivisionError
     - 502_bad_gateway: Simulates upstream service failure
     - 504_gateway_timeout: Simulates slow dependency
-    
+
     Args:
         chaos_type: Optional chaos scenario to trigger
-    
+
     Returns:
         OrderResponse with order details
-    
+
     Raises:
         HTTPException: For 502/504 scenarios
         ZeroDivisionError: For 500 scenario
     """
     order_id = str(uuid.uuid4())
-    
+
     log_event("order_create_start", order_id=order_id, chaos_type=chaos_type)
-    
+
     # ========================================================================
     # CHAOS INJECTION: 500 Internal Server Error
     # ========================================================================
@@ -387,7 +387,7 @@ def create_order(
         # This will raise ZeroDivisionError → 500 response
         # Agent's Log Expert should find this in traceback!
         result = 1 / 0
-    
+
     # ========================================================================
     # CHAOS INJECTION: 502 Bad Gateway
     # ========================================================================
@@ -396,7 +396,7 @@ def create_order(
         # Simulate upstream service down
         # Agent's Infra Expert should check container health!
         raise HTTPException(status_code=502, detail="Payment service unavailable")
-    
+
     # ========================================================================
     # CHAOS INJECTION: 504 Gateway Timeout
     # ========================================================================
@@ -406,13 +406,13 @@ def create_order(
         # Agent should see timeout in logs
         time.sleep(30)  # Simulates 30s delay
         raise HTTPException(status_code=504, detail="Request timeout")
-    
+
     # ========================================================================
     # NORMAL PATH: Call Payment Service
     # ========================================================================
     try:
         log_event("payment_call_start", order_id=order_id, url=PAYMENT_URL)
-        
+
         # Why httpx? Async support, better than requests
         with httpx.Client() as client:
             payment_response = client.post(
@@ -421,19 +421,19 @@ def create_order(
                 timeout=5.0
             )
             payment_status = payment_response.json().get("status", "unknown")
-        
+
         log_event("payment_call_success", order_id=order_id, status=payment_status)
-    
+
     except Exception as e:
         log_event("payment_call_failed", order_id=order_id, error=str(e))
         raise HTTPException(status_code=502, detail=f"Payment service error: {str(e)}")
-    
+
     # ========================================================================
     # NORMAL PATH: Call Inventory Service
     # ========================================================================
     try:
         log_event("inventory_call_start", order_id=order_id, url=INVENTORY_URL)
-        
+
         with httpx.Client() as client:
             inventory_response = client.post(
                 f"{INVENTORY_URL}/reserve",
@@ -441,18 +441,18 @@ def create_order(
                 timeout=5.0
             )
             inventory_status = inventory_response.json().get("status", "unknown")
-        
+
         log_event("inventory_call_success", order_id=order_id, status=inventory_status)
-    
+
     except Exception as e:
         log_event("inventory_call_failed", order_id=order_id, error=str(e))
         raise HTTPException(status_code=502, detail=f"Inventory service error: {str(e)}")
-    
+
     # ========================================================================
     # SUCCESS RESPONSE
     # ========================================================================
     log_event("order_create_success", order_id=order_id)
-    
+
     return OrderResponse(
         order_id=order_id,
         status="completed",
@@ -548,17 +548,17 @@ def process_payment(
 ):
     """Process payment for an order."""
     payment_id = str(uuid.uuid4())
-    
+
     log_event("payment_start", payment_id=payment_id, order_id=request.order_id, amount=request.amount)
-    
+
     # Chaos injection (optional)
     if chaos_type == "500_payment_failure":
         log_event("chaos_triggered", payment_id=payment_id, type="500_payment_failure")
         result = 1 / 0  # ZeroDivisionError
-    
+
     # Normal path
     log_event("payment_success", payment_id=payment_id, order_id=request.order_id)
-    
+
     return PaymentResponse(
         payment_id=payment_id,
         order_id=request.order_id,
@@ -626,17 +626,17 @@ def reserve_inventory(
 ):
     """Reserve inventory for an order."""
     reservation_id = str(uuid.uuid4())
-    
+
     log_event("reservation_start", reservation_id=reservation_id, order_id=request.order_id, item_id=request.item_id)
-    
+
     # Chaos injection (optional)
     if chaos_type == "500_inventory_error":
         log_event("chaos_triggered", reservation_id=reservation_id, type="500_inventory_error")
         result = 1 / 0
-    
+
     # Normal path
     log_event("reservation_success", reservation_id=reservation_id, order_id=request.order_id)
-    
+
     return ReservationResponse(
         reservation_id=reservation_id,
         order_id=request.order_id,
@@ -730,7 +730,7 @@ services:
     networks:
       - app-network
     restart: unless-stopped  # Auto-restart on failure
-  
+
   # ========================================================================
   # PAYMENT SERVICE (no dependencies)
   # ========================================================================
@@ -744,7 +744,7 @@ services:
     networks:
       - app-network
     restart: unless-stopped
-  
+
   # ========================================================================
   # INVENTORY SERVICE (no dependencies)
   # ========================================================================
@@ -966,7 +966,7 @@ FROM python:3.12-slim  # Not 3.10!
 
 **Symptom**:
 ```
-docker.errors.DockerException: Error while fetching server API version: 
+docker.errors.DockerException: Error while fetching server API version:
 ('Connection aborted.', FileNotFoundError(2, 'No such file or directory'))
 ```
 
@@ -1134,7 +1134,7 @@ services:
    def create_order(...):
        global request_count
        request_count += 1
-       
+
        try:
            # ... order logic
        except Exception:
@@ -1193,7 +1193,7 @@ services:
    docker logs payment-service --tail 20
    ```
 
-**Expected Result**: 
+**Expected Result**:
 - Payment service logs show ZeroDivisionError
 - Order service logs show "Payment service error"
 
@@ -1290,7 +1290,7 @@ Proceed to `LESSON_PHASE2.md` when you're ready to build the perception layer.
 
 **End of Phase 1 Lesson**
 
-✅ Infrastructure complete  
-✅ Services containerized  
-✅ Chaos injection working  
+✅ Infrastructure complete
+✅ Services containerized
+✅ Chaos injection working
 ✅ Ready for Phase 2: Perception & Memory

@@ -323,13 +323,13 @@ By completing all 5 phases, you will be able to:
    ```bash
    # Install Python 3.12+
    python --version  # Should be 3.12+
-   
+
    # Install Ollama
    # Visit: https://ollama.ai/download
-   
+
    # Pull model (9GB download - grab coffee!)
    ollama pull qwen2.5:14b
-   
+
    # Install uv
    pip install uv
    ```
@@ -492,8 +492,8 @@ Special thanks to:
 
 ---
 
-*Last Updated: 2024-04-30*  
-*Author: Auto-Healer Agent Project*  
-*Estimated Completion: 16-24 hours*  
-*Difficulty: Intermediate to Advanced*  
+*Last Updated: 2024-04-30*
+*Author: Auto-Healer Agent Project*
+*Estimated Completion: 16-24 hours*
+*Difficulty: Intermediate to Advanced*
 *Prerequisites: Python 3.12+, Docker, Ollama*

@@ -224,7 +224,7 @@ Features:
   - Budget overflow protection
   - Better FINISH criteria in system prompt
 
-See [PHASE4_RESULTS.md](PHASE4_RESULTS.md) for detailed test results and metrics.
+See [PHASE4_RESULTS.md](../testing/PHASE4_RESULTS.md) for detailed test results and metrics.
 
 ---
 
@@ -373,6 +373,6 @@ All phases are complete! The project is production-ready. To run the auto-healer
 
 ## Contributing
 
-See [BLUEPRINT.md](BLUEPRINT.md) for the complete development plan.
+See [BLUEPRINT.md](../BLUEPRINT.md) for the complete development plan.
 
 For questions or issues: Check the implementation plan in `.claude/plans/`

@@ -76,17 +76,17 @@ def get_logs(service):
 def fetch_service_logs(service_name: str, tail_lines: int = 100) -> str:
     """
     Fetch recent logs from a Docker container.
-    
+
     **Use this tool when:**
     - Investigating application errors (500 Internal Server Error)
     - Looking for Python tracebacks and stack traces
     - Checking for error messages in application logs
     - Finding timestamps of failures
-    
+
     **Do NOT use this tool for:**
     - Infrastructure health (use check_container_health instead)
     - Network issues (use check_container_health)
-    
+
     Args:
         service_name (str): Exact name of the Docker container.
             Examples: "order-service", "payment-service", "inventory-service"
@@ -94,19 +94,19 @@ def fetch_service_logs(service_name: str, tail_lines: int = 100) -> str:
         tail_lines (int): Number of recent log lines to retrieve.
             Default: 100 (sufficient for most error investigations)
             Range: 10-500 (more lines = more LLM tokens)
-    
+
     Returns:
         str: Container logs with timestamps, one line per log entry.
              Format: "2024-04-30T12:00:00Z [INFO] message here"
              Returns error message if container not found.
-    
+
     Example:
         # Fetch last 100 lines from order service
         logs = fetch_service_logs("order-service", tail_lines=100)
-        
+
         # Fetch last 50 lines for quick check
         logs = fetch_service_logs("payment-service", tail_lines=50)
-    
+
     Error Handling:
         - Container not found → Returns helpful error with available containers
         - Docker daemon down → Returns error with troubleshooting hint
@@ -152,20 +152,20 @@ def check_container_health(service_name: str) -> dict:
 def check_container_health(service_name: str) -> str:
     """
     Check health status of a Docker container.
-    
+
     Returns:
         str: Human-readable health report OR error message
     """
     try:
         client = docker.from_env()
         container = client.containers.get(service_name)
-        
+
         return f"""Container Health Report:
 Name: {container.name}
 Status: {container.status}
 Running: {container.status == 'running'}
 """
-    
+
     except docker.errors.NotFound:
         # ✅ Return error as string (LLM can read and reflect)
         available = [c.name for c in client.containers.list()]
@@ -177,7 +177,7 @@ Available containers:
 Tip: Use exact container name from the list above.
 Example: check_container_health("order-service")
 """
-    
+
     except docker.errors.APIError as e:
         return f"""Error: Docker API error: {str(e)}
 
@@ -224,8 +224,8 @@ New Alert
     ↓                    (vector similarity)
 [2] Retrieve Context ──→ Past RCA reports with same error pattern
     ↓
-[3] Enrich Prompt ────→ "Historical Context: Last time this 500 error 
-    ↓                    occurred, root cause was ZeroDivisionError at 
+[3] Enrich Prompt ────→ "Historical Context: Last time this 500 error
+    ↓                    occurred, root cause was ZeroDivisionError at
     │                    /app/app.py:84. Resolution: Fixed division logic."
     ↓
 [4] Agent Uses Context → Faster investigation (knows what to look for)
@@ -338,41 +338,41 @@ import operator
 class AlertTeamState(TypedDict):
     """
     Shared state for the multi-agent troubleshooting team.
-    
+
     This state flows through all graph nodes. Each node reads relevant fields
     and returns updates to merge back into the state.
-    
+
     Key Design Decisions:
     - messages: Annotated with operator.add → LangGraph appends new messages
     - agent_consultation_count: Dict tracking per-agent calls (budget enforcement)
     - All other fields: Last write wins (no accumulation)
     """
-    
+
     # ========================================================================
     # MESSAGE HISTORY
     # ========================================================================
     messages: Annotated[Sequence[BaseMessage], operator.add]
     """
     Conversation history between agents.
-    
+
     Why Annotated with operator.add?
     - LangGraph automatically APPENDS new messages (doesn't replace)
     - Each node returns {"messages": [new_message]} → auto-appended to history
     - Enables multi-turn agent collaboration
-    
+
     Message Types:
     - HumanMessage: User input or supervisor instructions
     - AIMessage: Agent responses (with name="log_expert", "infra_expert", etc.)
     - SystemMessage: System prompts and configuration
     """
-    
+
     # ========================================================================
     # ALERT METADATA
     # ========================================================================
     alert_info: dict
     """
     Original alert that triggered investigation.
-    
+
     Structure:
     {
         "service": "order-service",
@@ -380,78 +380,78 @@ class AlertTeamState(TypedDict):
         "error_message": "Internal Server Error",
         "timestamp": "2024-04-30T12:00:00Z"
     }
-    
+
     Used by: All agents (context for investigation)
     """
-    
+
     # ========================================================================
     # RAG MEMORY CONTEXT
     # ========================================================================
     historical_context: str
     """
     Historical context from similar past incidents (ChromaDB query result).
-    
+
     Populated by: memory_recall_node (entry point)
     Used by: All agents (enriches investigation with past learnings)
-    
+
     Example:
     "Similar incident on 2024-04-29: 500 error in order-service.
      Root cause: ZeroDivisionError at /app/app.py:84"
     """
-    
+
     # ========================================================================
     # SUPERVISOR ROUTING
     # ========================================================================
     next_worker: str
     """
     Supervisor's routing decision.
-    
+
     Values:
     - "log_expert": Route to log analysis agent
     - "infra_expert": Route to infrastructure agent
     - "FINISH": Investigation complete, proceed to HITL
-    
+
     Set by: supervisor_node
     Used by: Conditional routing edge
     """
-    
+
     # ========================================================================
     # BUDGET TRACKING (Prevents Infinite Loops)
     # ========================================================================
     agent_consultation_count: Dict[str, int]
     """
     Per-agent consultation counter.
-    
+
     Structure:
     {
         "log_expert": 2,     # Called 2 times
         "infra_expert": 1    # Called 1 time
     }
-    
+
     Why track this?
     - Prevents infinite supervisor loops on ambiguous evidence
     - Enforces MAX_CONSULTATIONS limit (default: 3 per agent)
     - Supervisor forced to FINISH when both budgets exhausted
-    
+
     Updated by: Each agent node (increments own counter)
     Checked by: supervisor_node (enforces limits)
     """
-    
+
     # ========================================================================
     # HUMAN-IN-THE-LOOP
     # ========================================================================
     approved: bool
     """
     Whether human approved the RCA report.
-    
+
     Set by: human_approval_node
     Used by: memory_commit_node (only save if approved)
     """
-    
+
     rca_report: str
     """
     Final root cause analysis report.
-    
+
     Set by: human_approval_node (compiled from agent messages)
     Used by: memory_commit_node (saves to ChromaDB)
     """
@@ -464,27 +464,27 @@ class AlertTeamState(TypedDict):
 def validate_state(state: AlertTeamState) -> bool:
     """
     Validate state structure (useful for debugging).
-    
+
     Returns:
         bool: True if state is valid
-    
+
     Raises:
         KeyError: If required fields missing
         TypeError: If field types incorrect
     """
     required_fields = ["messages", "alert_info", "historical_context", "next_worker"]
-    
+
     for field in required_fields:
         if field not in state:
             raise KeyError(f"Missing required field: {field}")
-    
+
     # Validate types
     if not isinstance(state["messages"], (list, tuple)):
         raise TypeError("messages must be a sequence")
-    
+
     if not isinstance(state["alert_info"], dict):
         raise TypeError("alert_info must be a dict")
-    
+
     return True
 ```
 
@@ -500,7 +500,7 @@ def validate_state(state: AlertTeamState) -> bool:
    # Without operator.add (last write wins):
    node1 returns: {"messages": [msg1]}  # State has [msg1]
    node2 returns: {"messages": [msg2]}  # State has [msg2] (msg1 lost!)
-   
+
    # With operator.add (accumulation):
    node1 returns: {"messages": [msg1]}  # State has [msg1]
    node2 returns: {"messages": [msg2]}  # State has [msg1, msg2] (appended!)
@@ -548,50 +548,50 @@ def fetch_service_logs(
 ) -> str:
     """
     Fetch recent logs from a Docker container.
-    
+
     **Use this tool when:**
     - Investigating application errors (500 Internal Server Error)
     - Looking for Python tracebacks and stack traces
     - Checking for error messages in application logs
     - Finding timestamps of failures
     - Analyzing request/response patterns
-    
+
     **Do NOT use this tool for:**
     - Infrastructure health checks (use check_container_health instead)
     - Container resource usage (use check_container_health instead)
     - Network connectivity issues (use check_container_health instead)
-    
+
     Args:
         service_name (str): Exact name of the Docker container.
             Examples: "order-service", "payment-service", "inventory-service"
             Must match container name from docker-compose.yml or docker ps
-            
+
         tail_lines (int, optional): Number of recent log lines to retrieve.
             Default: 100 (sufficient for most error investigations)
             Recommended range: 10-500
             Note: More lines = more LLM tokens consumed
-            
+
         since_seconds (int, optional): Only get logs from last N seconds.
             Example: since_seconds=300 (last 5 minutes)
             Default: None (all available logs, up to tail_lines)
-    
+
     Returns:
         str: Container logs with timestamps, formatted as multi-line string.
              Format: "YYYY-MM-DDTHH:MM:SS.ffffffZ <log message>"
              Each line is one log entry.
-             
+
              If error occurs, returns error message with troubleshooting hints.
-    
+
     Example Usage:
         # Fetch last 100 lines from order service
         logs = fetch_service_logs("order-service")
-        
+
         # Fetch last 50 lines for quick check
         logs = fetch_service_logs("payment-service", tail_lines=50)
-        
+
         # Fetch logs from last 5 minutes only
         logs = fetch_service_logs("order-service", since_seconds=300)
-    
+
     Error Handling:
         - Container not found → Returns list of available containers
         - Docker daemon down → Returns troubleshooting hint
@@ -601,13 +601,13 @@ def fetch_service_logs(
         # Initialize Docker client
         # Why from_env()? Respects DOCKER_HOST environment variable (Podman support)
         client = docker.from_env()
-        
+
         logger.info(f"Fetching logs from container: {service_name} (tail={tail_lines})")
-        
+
         # Get container by name
         # Why .get()? Raises NotFound if container doesn't exist (we catch below)
         container = client.containers.get(service_name)
-        
+
         # Fetch logs
         # Why tail=tail_lines? Prevents overwhelming context window
         # Why timestamps=True? Helps agent identify when errors occurred
@@ -617,24 +617,24 @@ def fetch_service_logs(
             timestamps=True,
             since=since_seconds
         )
-        
+
         # Decode bytes to string
         # Why decode('utf-8', errors='replace')? Handles binary data gracefully
         logs_str = logs.decode('utf-8', errors='replace')
-        
+
         logger.info(f"Successfully fetched {len(logs_str.splitlines())} log lines from {service_name}")
-        
+
         return logs_str
-    
+
     except docker.errors.NotFound:
         # ✅ Error as string (LLM can read and reflect)
         logger.warning(f"Container '{service_name}' not found")
-        
+
         try:
             # Get list of available containers to help LLM self-correct
             client = docker.from_env()
             available = [c.name for c in client.containers.list()]
-            
+
             error_msg = f"""Error: Container '{service_name}' not found.
 
 Available containers:
@@ -644,10 +644,10 @@ Tip: Use exact container name from the list above.
 Example: fetch_service_logs("order-service")
 """
             return error_msg
-        
+
         except Exception as e:
             return f"Error: Container not found and unable to list containers: {str(e)}"
-    
+
     except docker.errors.APIError as e:
         # Docker daemon issues
         logger.error(f"Docker API error: {str(e)}")
@@ -662,7 +662,7 @@ Troubleshooting:
 - Check Docker status: docker ps
 - For Podman: export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
 """
-    
+
     except Exception as e:
         # Catch-all for unexpected errors
         logger.error(f"Unexpected error fetching logs: {str(e)}")
@@ -679,7 +679,7 @@ This is an unusual error. Please check Docker daemon and container status manual
 def check_container_health(service_name: str) -> str:
     """
     Check health status and resource usage of a Docker container.
-    
+
     **Use this tool when:**
     - Investigating 502 Bad Gateway errors (likely container down)
     - Investigating 504 Gateway Timeout (likely resource exhaustion)
@@ -687,15 +687,15 @@ def check_container_health(service_name: str) -> str:
     - Looking for OOM (Out of Memory) kills
     - Checking restart count (container stability)
     - Analyzing memory/CPU usage patterns
-    
+
     **Do NOT use this tool for:**
     - Reading application logs (use fetch_service_logs instead)
     - Analyzing stack traces (use fetch_service_logs instead)
-    
+
     Args:
         service_name (str): Exact name of the Docker container to inspect.
             Examples: "order-service", "payment-service", "inventory-service"
-    
+
     Returns:
         str: Formatted health report including:
              - Container name and status (running/exited/restarting/paused)
@@ -704,17 +704,17 @@ def check_container_health(service_name: str) -> str:
              - Restart count (how many times container restarted)
              - Memory usage and limit
              - Created timestamp and uptime
-             
+
              If error occurs, returns error message with available containers.
-    
+
     Example Usage:
         # Check health of order service
         health = check_container_health("order-service")
-        
+
         # Look for OOM kills
         health = check_container_health("payment-service")
         # Output will show: "OOM Killed: True" if memory exhausted
-    
+
     Key Indicators:
         - Status "exited" → Container crashed
         - Exit code 137 → OOM (Out of Memory) killed by system
@@ -724,20 +724,20 @@ def check_container_health(service_name: str) -> str:
     """
     try:
         client = docker.from_env()
-        
+
         logger.info(f"Checking health of container: {service_name}")
-        
+
         # Get container
         container = client.containers.get(service_name)
-        
+
         # Get container state
         container.reload()  # Refresh state
         state = container.attrs['State']
-        
+
         # Get memory stats (if running)
         memory_usage = "N/A"
         memory_limit = "N/A"
-        
+
         if container.status == 'running':
             try:
                 stats = container.stats(stream=False)
@@ -747,7 +747,7 @@ def check_container_health(service_name: str) -> str:
                 memory_limit = f"{memory_limit:.2f} MB"
             except Exception as e:
                 logger.warning(f"Could not fetch memory stats: {str(e)}")
-        
+
         # Build health report
         health_report = f"""Container Health Report for '{service_name}':
 
@@ -781,18 +781,18 @@ Interpretation:
   - OOM Killed = True → Memory exhaustion caused crash
   - High Restart Count → Unstable container (investigate logs)
 """
-        
+
         logger.info(f"Successfully retrieved health info for {service_name}")
-        
+
         return health_report
-    
+
     except docker.errors.NotFound:
         logger.warning(f"Container '{service_name}' not found")
-        
+
         try:
             client = docker.from_env()
             available = [c.name for c in client.containers.list(all=True)]  # Include stopped containers
-            
+
             error_msg = f"""Error: Container '{service_name}' not found.
 
 Available containers (including stopped):
@@ -802,10 +802,10 @@ Tip: Use exact container name from the list above.
 Example: check_container_health("order-service")
 """
             return error_msg
-        
+
         except Exception as e:
             return f"Error: Container not found and unable to list containers: {str(e)}"
-    
+
     except docker.errors.APIError as e:
         logger.error(f"Docker API error: {str(e)}")
         return f"""Error: Docker API error: {str(e)}
@@ -814,7 +814,7 @@ Troubleshooting:
 - Check Docker daemon is running: docker ps
 - For Podman: export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
 """
-    
+
     except Exception as e:
         logger.error(f"Unexpected error checking container health: {str(e)}")
         return f"Error: Unexpected error: {str(e)}"
@@ -827,23 +827,23 @@ Troubleshooting:
 def list_containers() -> str:
     """
     List all Docker containers (helper function, not a direct agent tool).
-    
+
     Returns:
         str: Formatted list of container names and statuses
     """
     try:
         client = docker.from_env()
         containers = client.containers.list(all=True)
-        
+
         if not containers:
             return "No containers found."
-        
+
         lines = ["Available Docker Containers:", ""]
         for c in containers:
             lines.append(f"  - {c.name} ({c.status})")
-        
+
         return "\n".join(lines)
-    
+
     except Exception as e:
         return f"Error listing containers: {str(e)}"
 ```
@@ -854,7 +854,7 @@ def list_containers() -> str:
    ```python
    # ❌ Wrong: LLM can't parse Python objects
    return container  # <Container: order-service>
-   
+
    # ✅ Correct: LLM can read strings
    return "Status: running\nMemory: 35MB"
    ```
@@ -869,7 +869,7 @@ def list_containers() -> str:
    # ❌ Vague error
    return "Container not found"
    # LLM thinks: "Hmm, I'm stuck"
-   
+
    # ✅ Actionable error
    return "Container 'order' not found. Available: order-service, payment-service"
    # LLM thinks: "Oh, I should use 'order-service' not 'order'!"
@@ -920,36 +920,36 @@ def initialize_chromadb(
 ) -> bool:
     """
     Initialize ChromaDB with local persistence.
-    
+
     **Why local persistence?**
     - No external database required (SQLite-based)
     - Survives agent restarts
     - Simple setup (just a directory)
     - Privacy-friendly (data stays local)
-    
+
     Args:
         persist_directory (str): Directory for ChromaDB storage.
             Default: "./.chromadb" (in project root)
-            
+
         collection_name (str): Name of the incident collection.
             Default: "incident_history"
-    
+
     Returns:
         bool: True if initialization successful, False otherwise
-    
+
     Side Effects:
         - Creates persist_directory if doesn't exist
         - Sets global _client and _collection variables
         - Logs initialization status
     """
     global _client, _collection
-    
+
     try:
         logger.info(f"Initializing ChromaDB at: {persist_directory}")
-        
+
         # Create directory if doesn't exist
         os.makedirs(persist_directory, exist_ok=True)
-        
+
         # Initialize ChromaDB client with local persistence
         # Why Settings(anonymized_telemetry=False)? Privacy for production use
         # Why persist_directory? Data survives restarts
@@ -957,7 +957,7 @@ def initialize_chromadb(
             persist_directory=persist_directory,
             anonymized_telemetry=False  # Disable telemetry for privacy
         ))
-        
+
         # Get or create collection
         # Why get_or_create? Idempotent (safe to call multiple times)
         _collection = _client.get_or_create_collection(
@@ -967,14 +967,14 @@ def initialize_chromadb(
                 "hnsw:space": "cosine"  # Cosine similarity for semantic search
             }
         )
-        
+
         incident_count = _collection.count()
-        
+
         logger.info(f"ChromaDB initialized successfully. "
                    f"Collection '{collection_name}' has {incident_count} incidents.")
-        
+
         return True
-    
+
     except Exception as e:
         logger.error(f"Failed to initialize ChromaDB: {str(e)}")
         return False
@@ -983,27 +983,27 @@ def initialize_chromadb(
 def get_collection() -> chromadb.Collection:
     """
     Get ChromaDB collection (initializes if not already done).
-    
+
     Returns:
         chromadb.Collection: The incident history collection
-    
+
     Raises:
         RuntimeError: If initialization fails
     """
     global _collection
-    
+
     if _collection is None:
         success = initialize_chromadb()
         if not success or _collection is None:
             raise RuntimeError("Failed to initialize ChromaDB")
-    
+
     return _collection
 
 
 def get_memory_stats() -> Dict[str, int]:
     """
     Get memory statistics (for debugging/monitoring).
-    
+
     Returns:
         dict: {
             "total_incidents": int,
@@ -1032,28 +1032,28 @@ def query_past_incidents(
 ) -> str:
     """
     Query ChromaDB for similar past incidents using semantic search.
-    
+
     **How it works:**
     1. Build query text from alert metadata
     2. ChromaDB computes embedding (vector representation)
     3. Finds top_k most similar incidents (cosine similarity)
     4. Returns formatted results for LLM consumption
-    
+
     Args:
         alert_info (dict): Current alert metadata
             Required fields: service, status_code
             Optional: error_message, timestamp
-            
+
         top_k (int): Number of similar incidents to retrieve.
             Default: 3 (good balance of context vs token usage)
-            
+
         similarity_threshold (float): Minimum similarity score (0.0 to 1.0).
             Default: 0.0 (return all top_k results)
             Higher values = stricter matching
-    
+
     Returns:
         str: Formatted historical context for LLM, or "No similar past incidents found."
-    
+
     Example:
         alert = {"service": "order-service", "status_code": 500, "error_message": "Division by zero"}
         context = query_past_incidents(alert)
@@ -1064,13 +1064,13 @@ def query_past_incidents(
     """
     try:
         collection = get_collection()
-        
+
         # Check if collection has data
         # Why check count? Prevents "cannot query 0 results" error
         if collection.count() == 0:
             logger.info("No incidents in memory yet")
             return "No similar past incidents found."
-        
+
         # Build query text from alert metadata
         # Why include service + status_code + error? Better semantic matching
         query_parts = [
@@ -1079,25 +1079,25 @@ def query_past_incidents(
             alert_info.get('error_message', '')
         ]
         query_text = " ".join(filter(None, query_parts))  # Filter empty strings
-        
+
         logger.info(f"Querying ChromaDB with: '{query_text}' (top_k={top_k})")
-        
+
         # Semantic search
         # Why n_results=min(top_k, count)? Can't retrieve more than exist
         results = collection.query(
             query_texts=[query_text],
             n_results=min(top_k, collection.count())
         )
-        
+
         # Parse results
         documents = results.get('documents', [[]])[0]
         metadatas = results.get('metadatas', [[]])[0]
         distances = results.get('distances', [[]])[0]  # Lower distance = more similar
-        
+
         if not documents:
             logger.info("No similar incidents found (empty results)")
             return "No similar past incidents found."
-        
+
         # Filter by similarity threshold (distance < threshold)
         # Note: ChromaDB returns DISTANCE (lower = more similar), not similarity
         # For cosine distance: 0 = identical, 2 = opposite
@@ -1106,33 +1106,33 @@ def query_past_incidents(
             for doc, meta, dist in zip(documents, metadatas, distances)
             if dist <= (2.0 - similarity_threshold)  # Convert similarity to distance
         ]
-        
+
         if not filtered_results:
             logger.info(f"No incidents above similarity threshold {similarity_threshold}")
             return "No similar past incidents found."
-        
+
         # Format results for LLM consumption
         formatted = "**Similar Past Incidents:**\n\n"
-        
+
         for i, (doc, meta, dist) in enumerate(filtered_results, 1):
             # Extract metadata
             timestamp = meta.get('timestamp', 'Unknown date')
             service = meta.get('service', 'unknown')
             status_code = meta.get('status_code', 'unknown')
-            
+
             # Truncate RCA for readability (first 300 chars)
             rca_preview = doc[:300] + "..." if len(doc) > 300 else doc
-            
+
             # Calculate similarity percentage (1 - distance/2) * 100
             similarity_pct = ((2.0 - dist) / 2.0) * 100
-            
+
             formatted += f"{i}. [{timestamp}] {service} - {status_code} (Similarity: {similarity_pct:.1f}%)\n"
             formatted += f"   {rca_preview}\n\n"
-        
+
         logger.info(f"Found {len(filtered_results)} similar incidents")
-        
+
         return formatted
-    
+
     except Exception as e:
         logger.error(f"Error querying past incidents: {str(e)}")
         return f"Error querying memory: {str(e)}"
@@ -1148,30 +1148,30 @@ def save_incident(
 ) -> bool:
     """
     Store human-approved RCA report in ChromaDB.
-    
+
     **Why only store approved RCAs?**
     - Prevents agent from learning incorrect diagnoses
     - Human-in-the-loop ensures quality
     - Memory improves over time (only good examples)
-    
+
     Args:
         rca_report (str): Full RCA report text (will be embedded)
         alert_info (dict): Alert metadata for filtering/search
-    
+
     Returns:
         bool: True if successfully saved, False otherwise
-    
+
     Side Effects:
         - Adds document to ChromaDB collection
         - Generates embedding automatically (ChromaDB handles this)
     """
     try:
         collection = get_collection()
-        
+
         # Generate unique ID
         # Why timestamp-based? Ensures uniqueness + sortability
         incident_id = f"{alert_info.get('service', 'unknown')}_{alert_info.get('status_code', 0)}_{datetime.utcnow().timestamp()}"
-        
+
         # Prepare metadata (for filtering)
         metadata = {
             "service": alert_info.get('service', 'unknown'),
@@ -1179,9 +1179,9 @@ def save_incident(
             "timestamp": datetime.utcnow().isoformat(),
             "error_message": alert_info.get('error_message', '')[:200]  # Truncate
         }
-        
+
         logger.info(f"Saving incident to memory: {incident_id}")
-        
+
         # Add to collection
         # Why documents=[rca_report]? This gets embedded for semantic search
         # Why metadatas=[metadata]? Enables filtering by service, status, etc.
@@ -1190,11 +1190,11 @@ def save_incident(
             metadatas=[metadata],
             ids=[incident_id]
         )
-        
+
         logger.info(f"Incident saved successfully. Total incidents: {collection.count()}")
-        
+
         return True
-    
+
     except Exception as e:
         logger.error(f"Failed to save incident: {str(e)}")
         return False
@@ -1207,26 +1207,26 @@ def save_incident(
 def clear_all_incidents() -> bool:
     """
     Delete all incidents from memory (use with caution!).
-    
+
     **WARNING**: This is irreversible.
-    
+
     Returns:
         bool: True if successfully cleared
     """
     try:
         global _client, _collection
-        
+
         if _client and _collection:
             # Delete collection
             _client.delete_collection(name=_collection.name)
             logger.info("All incidents cleared from memory")
-            
+
             # Reinitialize
             initialize_chromadb()
             return True
-        
+
         return False
-    
+
     except Exception as e:
         logger.error(f"Error clearing incidents: {str(e)}")
         return False
@@ -1235,16 +1235,16 @@ def clear_all_incidents() -> bool:
 def get_all_incidents() -> List[Dict]:
     """
     Retrieve all incidents (for debugging/export).
-    
+
     Returns:
         list: List of dicts with {id, document, metadata}
     """
     try:
         collection = get_collection()
-        
+
         # Get all items
         results = collection.get()
-        
+
         incidents = []
         for i in range(len(results['ids'])):
             incidents.append({
@@ -1252,9 +1252,9 @@ def get_all_incidents() -> List[Dict]:
                 "document": results['documents'][i],
                 "metadata": results['metadatas'][i]
             })
-        
+
         return incidents
-    
+
     except Exception as e:
         logger.error(f"Error getting all incidents: {str(e)}")
         return []
@@ -1274,7 +1274,7 @@ def get_all_incidents() -> List[Dict]:
    query: "500 error order service"
    matches: Only incidents with EXACT words "500", "error", "order", "service"
    misses: "Internal Server Error in order-service" (different wording!)
-   
+
    # Semantic search (ChromaDB):
    query: "500 error order service"
    matches: "Internal Server Error in order-service" (understands meaning!)
@@ -1366,50 +1366,50 @@ def get_llm(
 ) -> ChatOllama:
     """
     Initialize local LLM with Ollama.
-    
+
     CRITICAL: num_ctx MUST be >= 16384 for log analysis!
     Default 2048 will truncate logs and cause silent failures.
-    
+
     Args:
         model (str): Ollama model name.
             Default: "qwen2.5:14b"
             Options: Run `ollama list` to see installed models
-            
+
         num_ctx (int, optional): Context window size in tokens.
             Default: None (uses RECOMMENDED_CONTEXT_WINDOW = 16384)
             Minimum: 16384 (enforced with warning)
             Recommended: 16384-32768
-            
+
         temperature (float): Sampling temperature.
             0.0 = Deterministic (best for debugging)
             0.7 = Balanced creativity
             1.0 = Maximum randomness
             Default: 0.0 (reproducible results for testing)
-            
+
         num_predict (int): Maximum tokens to generate in response.
             Default: 2048 (sufficient for most RCA reports)
             Increase if responses are truncated
-    
+
     Returns:
         ChatOllama: Configured LLM instance ready for use
-    
+
     Raises:
         RuntimeError: If Ollama is not running or model not found
-    
+
     Example:
         # Use defaults (recommended)
         llm = get_llm()
-        
+
         # Use different model
         llm = get_llm(model="llama3.1:8b")
-        
+
         # Larger context for complex investigations
         llm = get_llm(num_ctx=32768)
     """
     # Set default context window if not provided
     if num_ctx is None:
         num_ctx = RECOMMENDED_CONTEXT_WINDOW
-    
+
     # Safety check: Enforce minimum context window
     if num_ctx < MIN_CONTEXT_WINDOW:
         logger.warning(
@@ -1421,13 +1421,13 @@ def get_llm(
             f"Default 2048 will truncate logs and cause agent to miss errors!"
         )
         num_ctx = MIN_CONTEXT_WINDOW
-    
+
     logger.info(f"Initializing ChatOllama:")
     logger.info(f"  Model: {model}")
     logger.info(f"  Context Window: {num_ctx} tokens")
     logger.info(f"  Temperature: {temperature}")
     logger.info(f"  Max Output: {num_predict} tokens")
-    
+
     try:
         llm = ChatOllama(
             model=model,
@@ -1437,18 +1437,18 @@ def get_llm(
             # Why no format="json"? Not all models support it
             # We use Pydantic structured outputs instead (more reliable)
         )
-        
+
         logger.info("ChatOllama LLM initialized successfully")
-        
+
         # Test connectivity (optional, catches issues early)
         try:
             test_response = llm.invoke("Hello")
             logger.debug(f"LLM test successful: {test_response.content[:50]}...")
         except Exception as e:
             logger.warning(f"LLM test failed (but proceeding): {str(e)}")
-        
+
         return llm
-    
+
     except Exception as e:
         logger.error(f"Failed to initialize LLM: {str(e)}")
         logger.error("Troubleshooting:")
@@ -1465,26 +1465,26 @@ def get_llm(
 def test_llm_connection(model: str = DEFAULT_MODEL) -> bool:
     """
     Test LLM connectivity (useful for setup validation).
-    
+
     Args:
         model (str): Model to test
-    
+
     Returns:
         bool: True if connection successful, False otherwise
     """
     try:
         logger.info(f"Testing LLM connection with model: {model}")
-        
+
         llm = get_llm(model=model)
         response = llm.invoke("Respond with exactly: 'LLM connection successful'")
-        
+
         if "successful" in response.content.lower():
             logger.info("✅ LLM connection test: PASSED")
             return True
         else:
             logger.warning(f"⚠️  LLM connection test: UNEXPECTED RESPONSE: {response.content}")
             return False
-    
+
     except Exception as e:
         logger.error(f"❌ LLM connection test: FAILED - {str(e)}")
         return False
@@ -1493,14 +1493,14 @@ def test_llm_connection(model: str = DEFAULT_MODEL) -> bool:
 def list_available_models() -> list:
     """
     List Ollama models installed on the system.
-    
+
     Returns:
         list: Model names, or empty list if Ollama not available
     """
     try:
         import subprocess
         result = subprocess.run(['ollama', 'list'], capture_output=True, text=True)
-        
+
         if result.returncode == 0:
             # Parse output (skip header line)
             lines = result.stdout.strip().split('\n')[1:]
@@ -1508,7 +1508,7 @@ def list_available_models() -> list:
             return models
         else:
             return []
-    
+
     except Exception as e:
         logger.error(f"Error listing models: {str(e)}")
         return []
@@ -1521,21 +1521,21 @@ def list_available_models() -> list:
 if __name__ == "__main__":
     # Test LLM connection
     logging.basicConfig(level=logging.INFO)
-    
+
     print("\n" + "=" * 60)
     print("LLM Configuration Test")
     print("=" * 60)
-    
+
     # List available models
     print("\nAvailable Ollama models:")
     models = list_available_models()
     for model in models:
         print(f"  - {model}")
-    
+
     # Test connection
     print("\nTesting LLM connection...")
     success = test_llm_connection()
-    
+
     if success:
         print("\n✅ LLM configuration validated successfully!")
     else:
@@ -1548,13 +1548,13 @@ if __name__ == "__main__":
    ```python
    # THIS WAS THE ACTUAL BUG:
    llm = ChatOllama(model="qwen2.5:14b")  # Default num_ctx=2048
-   
+
    # Agent fetches 100 lines of logs (5000 tokens)
    # Ollama silently truncates to 2048 tokens
    # Only first ~40 lines visible to LLM
    # Stack trace at line 95 is MISSING
    # LLM: "I don't see any errors" (but error was there!)
-   
+
    # Fix:
    llm = ChatOllama(model="qwen2.5:14b", num_ctx=16384)
    # Now all 100 lines fit → Agent finds error
@@ -1872,14 +1872,14 @@ def fetch_service_logs(
 ) -> str:
     """
     ... (existing docstring)
-    
+
     Args:
         filter_text (str, optional): Only return lines containing this text.
             Example: filter_text="ERROR" (only error lines)
     """
     logs = container.logs(tail=tail_lines, timestamps=True)
     logs_str = logs.decode('utf-8', errors='replace')
-    
+
     # NEW: Filter lines
     if filter_text:
         filtered_lines = [
@@ -1887,7 +1887,7 @@ def fetch_service_logs(
             if filter_text.lower() in line.lower()
         ]
         return "\n".join(filtered_lines)
-    
+
     return logs_str
 ```
 
@@ -1915,7 +1915,7 @@ def save_incident(
 ) -> bool:
     """
     ... (existing docstring)
-    
+
     Args:
         tags (list, optional): Tags for categorization.
             Examples: ["database_timeout"], ["oom_kill"], ["code_bug"]
@@ -1926,7 +1926,7 @@ def save_incident(
         "timestamp": datetime.utcnow().isoformat(),
         "tags": ",".join(tags or [])  # NEW: Store as comma-separated
     }
-    
+
     collection.add(
         documents=[rca_report],
         metadatas=[metadata],
@@ -2052,7 +2052,7 @@ Proceed to `LESSON_PHASE3.md` when ready to build the multi-agent system.
 
 **End of Phase 2 Lesson**
 
-✅ Tools implemented  
-✅ Memory system working  
-✅ LLM configured correctly  
+✅ Tools implemented
+✅ Memory system working
+✅ LLM configured correctly
 ✅ Ready for Phase 3: Multi-Agent Orchestration

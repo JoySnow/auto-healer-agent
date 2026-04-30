@@ -2,8 +2,8 @@
 
 ## Summary
 
-**Status**: ✅ Phase 4 Successfully Completed  
-**Date**: 2024-04-30  
+**Status**: ✅ Phase 4 Successfully Completed
+**Date**: 2024-04-30
 **Agent Version**: v0.1.0
 
 Phase 4 integration testing validated the complete end-to-end workflow of the Auto-Healer Agent. All components integrated successfully and demonstrated autonomous troubleshooting capabilities.
@@ -26,7 +26,7 @@ Phase 4 integration testing validated the complete end-to-end workflow of the Au
 
 ### Services Running:
 - ✅ order-service (port 8001)
-- ✅ payment-service (port 8002)  
+- ✅ payment-service (port 8002)
 - ✅ inventory-service (port 8003)
 
 ---
@@ -46,7 +46,7 @@ Phase 4 integration testing validated the complete end-to-end workflow of the Au
    - fastapi + uvicorn
    - pydantic + rich
 
-**Result**: ✅ **PASS**  
+**Result**: ✅ **PASS**
 All dependencies installed successfully without conflicts.
 
 ---
@@ -60,7 +60,7 @@ All dependencies installed successfully without conflicts.
 2. Ran `test_llm_connection('qwen2.5:14b')`
 3. Verified 16K context window configuration
 
-**Result**: ✅ **PASS**  
+**Result**: ✅ **PASS**
 LLM connection successful. Model responding correctly.
 
 **Output:**
@@ -78,7 +78,7 @@ LLM Connection Test: PASSED
 1. Ran `python -m auto_healer.main --visualize-only`
 2. Generated Mermaid diagram
 
-**Result**: ✅ **PASS**  
+**Result**: ✅ **PASS**
 Graph compiled successfully. All nodes and edges present.
 
 **Mermaid Diagram:**
@@ -87,7 +87,7 @@ graph TD;
     __start__ --> memory_recall
     memory_recall --> supervisor
     supervisor -.-> log_expert
-    supervisor -.-> infra_expert  
+    supervisor -.-> infra_expert
     supervisor -.-> human_approval
     log_expert --> supervisor
     infra_expert --> supervisor
@@ -117,7 +117,7 @@ INFO: No similar past incidents found
 ```
 ✅ Memory queried (empty as expected - first run)
 
-#### Step 2: Supervisor Analysis  
+#### Step 2: Supervisor Analysis
 ```
 INFO: Supervisor decision: log_expert
 INFO: Reasoning: 500 error indicates a code-level issue requiring analysis of application logs and stack traces.
@@ -130,14 +130,14 @@ INFO: Successfully fetched 100 log lines from order-service
 ```
 
 **Log Expert Findings:**
-- **Exception Type**: `ZeroDivisionError`  
+- **Exception Type**: `ZeroDivisionError`
 - **File Path**: `/app/app.py`, line 84
 - **Code**: `result = 1 / 0`
 - **Order ID**: `c08526cb-54ae-4ef1-b463-39950fe2814b`
 - **Chaos Type**: `500_zerodivision`
 
-✅ Tool calling successful (fetch_service_logs)  
-✅ Stack trace parsing accurate  
+✅ Tool calling successful (fetch_service_logs)
+✅ Stack trace parsing accurate
 ✅ Root cause correctly identified
 
 #### Step 4: Supervisor Synthesis
@@ -167,8 +167,8 @@ ROOT CAUSE ANALYSIS REPORT
 
 ### Summary of 500 Error in order-service
 
-**Service Name:** order-service  
-**Error Type:** Internal Server Error (500)  
+**Service Name:** order-service
+**Error Type:** Internal Server Error (500)
 
 #### Root Cause:
 - **Exception Type:** `ZeroDivisionError`
@@ -187,8 +187,8 @@ result = 1 / 0
 - **Code Fix:** This is a deliberate error for testing. Remove or handle properly.
 ```
 
-✅ HITL pause reached  
-✅ RCA report formatted correctly  
+✅ HITL pause reached
+✅ RCA report formatted correctly
 ✅ All required information present
 
 **Result**: ✅ **PASS**
@@ -248,7 +248,7 @@ result = 1 / 0
 ## API Compatibility Issues Resolved
 
 ### Issue 1: Package Name vs Directory Name
-**Error**: 
+**Error**:
 ```
 ValueError: Unable to determine which files to ship inside the wheel
 ```
@@ -261,7 +261,7 @@ packages = ["auto_healer"]
 ```
 
 ### Issue 2: LangChain 1.x Breaking Changes
-**Error**: 
+**Error**:
 ```
 ImportError: cannot import name 'AgentExecutor' from 'langchain.agents'
 ```
@@ -283,22 +283,22 @@ Changed parameter from `state_modifier=` to `prompt=`
 ## Known Issues & Limitations
 
 ### 1. ChromaDB Query Error (Non-Critical)
-**Error**: 
+**Error**:
 ```
 ERROR: Number of requested results 0, cannot be negative, or zero. in query.
 ```
 
-**Impact**: Minimal - query returns empty string, workflow continues  
+**Impact**: Minimal - query returns empty string, workflow continues
 **Fix**: Needed - Add check for collection.count() > 0 before querying
 
 ### 2. Docker SDK vs Podman
-**Status**: Working but requires manual setup  
-**Requirement**: Need to set `DOCKER_HOST` environment variable for podman  
+**Status**: Working but requires manual setup
+**Requirement**: Need to set `DOCKER_HOST` environment variable for podman
 **Future**: Add auto-detection or instructions
 
 ### 3. HITL Revision Flow
-**Status**: Partial implementation  
-**Current**: User can enter 'edit' but graph ends (need to re-run)  
+**Status**: Partial implementation
+**Current**: User can enter 'edit' but graph ends (need to re-run)
 **Future**: Implement feedback loop back to Supervisor
 
 ---
@@ -355,7 +355,7 @@ ERROR: Number of requested results 0, cannot be negative, or zero. in query.
 - **Result**: Perfect execution → RCA report → HITL
 - **Validated**: Log Expert analysis, stack trace parsing, supervisor routing
 
-### Test 2: 502 Bad Gateway ⚠️✅  
+### Test 2: 502 Bad Gateway ⚠️✅
 - **Duration**: ~6 minutes, 14+ LLM calls, 14/15 iterations
 - **Result**: Circuit breaker triggered (working as designed)
 - **Validated**: Multi-agent collaboration, circuit breaker, ambiguous evidence handling

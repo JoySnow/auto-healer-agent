@@ -628,13 +628,13 @@ How do we orchestrate multi-agent workflows with state management?
 ```python
 def run_workflow(alert_info):
     state = {"alert_info": alert_info, "messages": []}
-    
+
     # Step 1: Memory recall
     state = memory_recall(state)
-    
+
     # Step 2: Supervisor
     state = supervisor(state)
-    
+
     # Step 3: Conditional routing (manual if/else)
     if state["next_worker"] == "log_expert":
         state = log_expert(state)

@@ -35,7 +35,7 @@ Before starting this lesson, you should have:
 # Test tools work
 python -c "from auto_healer.tools.docker_tools import fetch_service_logs; print('Tools: OK')"
 
-# Test memory works  
+# Test memory works
 python -c "from auto_healer.memory import initialize_chromadb; initialize_chromadb(); print('Memory: OK')"
 
 # Test LLM works
@@ -137,7 +137,7 @@ Mega Agent:
 
 Multi-Agent:
 - Supervisor prompt: 300 tokens
-- Log Expert prompt: 500 tokens  
+- Log Expert prompt: 500 tokens
 - Infra Expert prompt: 500 tokens
 - Per request: 300 + 500 = 800 tokens (only calls one specialist)
 
@@ -193,7 +193,7 @@ from typing import Literal
 class SupervisorDecision(BaseModel):
     """
     Supervisor routing decision.
-    
+
     Pydantic enforces EXACT format (prevents LLM hallucination).
     """
     next_worker: Literal["log_expert", "infra_expert", "FINISH"] = Field(
@@ -226,7 +226,7 @@ print(decision.reasoning)     # String explanation
 }
 ```
 
-**Impact**: 
+**Impact**:
 - Hallucination rate: 30% → 0% (no invalid routing!)
 - Parsing errors: 10% → 0% (Pydantic handles it)
 - Code complexity: 50 lines → 5 lines (no manual parsing)
@@ -402,10 +402,10 @@ class AlertTeamState(TypedDict):
 def supervisor_node(state: AlertTeamState) -> Dict[str, Any]:
     # Read state
     alert = state["alert_info"]
-    
+
     # Do work (decide routing)
     decision = llm.invoke(...)
-    
+
     # Return state updates (LangGraph merges into main state)
     return {"next_worker": "log_expert", "messages": [new_message]}
 
@@ -506,12 +506,12 @@ logger = logging.getLogger(__name__)
 class SupervisorDecision(BaseModel):
     """
     Supervisor routing decision with Pydantic enforcement.
-    
+
     Why Pydantic?
     - LLM must return EXACT format (no hallucination)
     - Type safety (mypy checking)
     - Automatic JSON parsing
-    
+
     Why Literal?
     - LLM can ONLY output these exact values
     - No risk of typos ("log_exprt" vs "log_expert")
@@ -520,7 +520,7 @@ class SupervisorDecision(BaseModel):
     next_worker: Literal["log_expert", "infra_expert", "FINISH"] = Field(
         description="Next agent to call: 'log_expert' for code bugs, 'infra_expert' for container issues, 'FINISH' when investigation complete"
     )
-    
+
     reasoning: str = Field(
         description="1-2 sentences explaining your routing decision. Be specific about why you chose this agent."
     )
@@ -587,52 +587,52 @@ You MUST return JSON with exact format:
 def supervisor_node(state: AlertTeamState) -> Dict[str, Any]:
     """
     Supervisor Agent - Routes tasks to specialist workers.
-    
+
     Workflow:
     1. Read alert info and investigation history
     2. Check agent consultation budgets
     3. Decide next action (route to specialist OR finish)
     4. Return routing decision
-    
+
     Args:
         state (AlertTeamState): Current graph state
-    
+
     Returns:
         dict: State updates with routing decision
     """
     logger.info("=" * 60)
     logger.info("=== SUPERVISOR: Analyzing Situation ===")
     logger.info("=" * 60)
-    
+
     # ========================================================================
     # 1. GATHER CONTEXT
     # ========================================================================
-    
+
     alert_info = state.get("alert_info", {})
     service = alert_info.get("service", "unknown")
     status_code = alert_info.get("status_code", 0)
     error_message = alert_info.get("error_message", "Unknown error")
-    
+
     messages = state.get("messages", [])
     historical_context = state.get("historical_context", "")
     agent_counts = state.get("agent_consultation_count", {"log_expert": 0, "infra_expert": 0})
-    
+
     logger.info(f"Alert: {service} - {status_code} - {error_message}")
     logger.info(f"Agent Consultations: {agent_counts}")
-    
+
     # ========================================================================
     # 2. CHECK BUDGETS (Prevent Infinite Loops)
     # ========================================================================
-    
+
     MAX_AGENT_CONSULTATIONS = 3
-    
+
     log_expert_budget_exceeded = agent_counts.get("log_expert", 0) >= MAX_AGENT_CONSULTATIONS
     infra_expert_budget_exceeded = agent_counts.get("infra_expert", 0) >= MAX_AGENT_CONSULTATIONS
-    
+
     # Force FINISH if both budgets exhausted
     if log_expert_budget_exceeded and infra_expert_budget_exceeded:
         logger.warning("⚠️  Both agent budgets exhausted. Forcing FINISH.")
-        
+
         budget_exhausted_message = HumanMessage(
             content=f"""Investigation budget exhausted:
 - log_expert: {agent_counts.get('log_expert', 0)}/{MAX_AGENT_CONSULTATIONS} consultations
@@ -640,16 +640,16 @@ def supervisor_node(state: AlertTeamState) -> Dict[str, Any]:
 
 Proceeding to Human-in-the-Loop with findings gathered so far."""
         )
-        
+
         return {
             "next_worker": "FINISH",
             "messages": [budget_exhausted_message]
         }
-    
+
     # ========================================================================
     # 3. BUILD INVESTIGATION SUMMARY
     # ========================================================================
-    
+
     # Extract recent agent findings (last 3 messages)
     recent_findings = []
     for msg in messages[-3:]:
@@ -657,13 +657,13 @@ Proceeding to Human-in-the-Loop with findings gathered so far."""
             # Truncate for readability
             content = msg.content[:300] + "..." if len(msg.content) > 300 else msg.content
             recent_findings.append(content)
-    
+
     investigation_summary = "\n\n".join(recent_findings) if recent_findings else "No findings yet."
-    
+
     # ========================================================================
     # 4. BUILD SUPERVISOR PROMPT
     # ========================================================================
-    
+
     # Budget status display
     budget_status = f"""**Agent Consultation Budgets:**
 - log_expert: {agent_counts.get('log_expert', 0)}/{MAX_AGENT_CONSULTATIONS} used{' (BUDGET EXCEEDED)' if log_expert_budget_exceeded else ''}
@@ -671,7 +671,7 @@ Proceeding to Human-in-the-Loop with findings gathered so far."""
 
 Note: If an agent's budget is exceeded, you cannot route to it. Consider FINISH if evidence has plateaued.
 """
-    
+
     supervisor_prompt = f"""**Current Alert:**
 Service: {service}
 Status Code: {status_code}
@@ -693,27 +693,27 @@ Consider:
 - Whether evidence is plateauing (same findings repeated)
 - Agent budget constraints
 """
-    
+
     logger.debug(f"Supervisor Prompt:\n{supervisor_prompt}")
-    
+
     # ========================================================================
     # 5. GET STRUCTURED DECISION FROM LLM
     # ========================================================================
-    
+
     try:
         llm = get_llm(temperature=0.0)  # Deterministic for reproducibility
-        
+
         # Structured output (Pydantic enforces format)
         structured_llm = llm.with_structured_output(SupervisorDecision)
-        
+
         decision: SupervisorDecision = structured_llm.invoke([
             SystemMessage(content=SUPERVISOR_SYSTEM_PROMPT),
             HumanMessage(content=supervisor_prompt)
         ])
-        
+
         logger.info(f"Supervisor Initial Decision: {decision.next_worker}")
         logger.info(f"Reasoning: {decision.reasoning}")
-        
+
     except Exception as e:
         logger.error(f"Supervisor LLM call failed: {str(e)}")
         # Fallback to FINISH on error
@@ -721,37 +721,37 @@ Consider:
             "next_worker": "FINISH",
             "messages": [HumanMessage(content=f"Supervisor error: {str(e)}. Proceeding to HITL.")]
         }
-    
+
     # ========================================================================
     # 6. VALIDATE DECISION AGAINST BUDGETS
     # ========================================================================
-    
+
     final_decision = decision.next_worker
     final_reasoning = decision.reasoning
-    
+
     # Override if routing to exhausted agent
     if decision.next_worker == "log_expert" and log_expert_budget_exceeded:
         logger.warning("⚠️  Cannot route to log_expert (budget exceeded). Forcing FINISH.")
         final_decision = "FINISH"
         final_reasoning = f"{decision.reasoning} However, log_expert budget exhausted. Proceeding to HITL."
-    
+
     elif decision.next_worker == "infra_expert" and infra_expert_budget_exceeded:
         logger.warning("⚠️  Cannot route to infra_expert (budget exceeded). Forcing FINISH.")
         final_decision = "FINISH"
         final_reasoning = f"{decision.reasoning} However, infra_expert budget exhausted. Proceeding to HITL."
-    
+
     logger.info(f"✓ Final Decision: {final_decision}")
-    
+
     # ========================================================================
     # 7. RETURN STATE UPDATE
     # ========================================================================
-    
+
     routing_message = HumanMessage(
         content=f"""**Supervisor Decision:**
 Next: {final_decision}
 Reasoning: {final_reasoning}"""
     )
-    
+
     return {
         "next_worker": final_decision,
         "messages": [routing_message]
@@ -874,46 +874,46 @@ Example Output:
 def log_expert_node(state: AlertTeamState) -> Dict[str, Any]:
     """
     Log Expert Agent - Analyzes application logs for code-level issues.
-    
+
     Uses ReAct pattern:
     1. Reasons about what to investigate
     2. Acts by calling fetch_service_logs tool
     3. Observes the log output
     4. Reasons about findings
     5. Acts by returning analysis OR calling tool again
-    
+
     Increments agent_consultation_count for budget tracking.
-    
+
     Args:
         state (AlertTeamState): Current graph state
-    
+
     Returns:
         dict: State updates with analysis message and incremented consultation count
     """
     logger.info("=" * 60)
     logger.info("=== LOG EXPERT: Investigating Application Logs ===")
     logger.info("=" * 60)
-    
+
     # ========================================================================
     # 1. GATHER CONTEXT
     # ========================================================================
-    
+
     alert_info = state.get("alert_info", {})
     service = alert_info.get("service", "unknown")
     status_code = alert_info.get("status_code", 0)
     historical_context = state.get("historical_context", "")
-    
+
     # Increment consultation count (budget tracking)
     agent_counts = state.get("agent_consultation_count", {}).copy()
     agent_counts["log_expert"] = agent_counts.get("log_expert", 0) + 1
-    
+
     logger.info(f"Service: {service}, Status: {status_code}")
     logger.info(f"Log Expert consultation #{agent_counts['log_expert']}")
-    
+
     # ========================================================================
     # 2. BUILD SYSTEM MESSAGE
     # ========================================================================
-    
+
     system_message = f"""{LOG_EXPERT_SYSTEM_PROMPT}
 
 **Alert Context:**
@@ -927,14 +927,14 @@ Error Message: {alert_info.get('error_message', 'Unknown error')}
 **Your Task:**
 Investigate this {status_code} error in {service}. Use fetch_service_logs to retrieve logs and identify the root cause.
 """
-    
+
     # ========================================================================
     # 3. CREATE REACT AGENT
     # ========================================================================
-    
+
     llm = get_llm(temperature=0.0)
     tools = [fetch_service_logs]
-    
+
     # create_react_agent: Built-in ReAct loop
     # - Automatically calls tools
     # - Iterates until conclusion
@@ -944,51 +944,51 @@ Investigate this {status_code} error in {service}. Use fetch_service_logs to ret
         tools,
         prompt=system_message  # System message for agent
     )
-    
+
     # ========================================================================
     # 4. EXECUTE REACT AGENT
     # ========================================================================
-    
+
     try:
         logger.info("Starting ReAct loop...")
-        
+
         agent_input = {
             "messages": [
                 HumanMessage(content=f"Investigate the {status_code} error in {service}. Analyze logs and identify root cause.")
             ]
         }
-        
+
         # Execute with recursion limit (prevents infinite loops)
         result = agent.invoke(
             agent_input,
             config={"recursion_limit": 10}  # Max 10 ReAct iterations
         )
-        
+
         logger.info("✓ ReAct loop completed")
-        
+
         # ========================================================================
         # 5. EXTRACT ANALYSIS FROM RESULT
         # ========================================================================
-        
+
         if result and "messages" in result:
             # Last message contains final analysis
             final_message = result["messages"][-1]
-            
+
             analysis_content = final_message.content if hasattr(final_message, 'content') else str(final_message)
-            
+
             logger.info(f"Analysis preview: {analysis_content[:200]}...")
-            
+
             # Create response message with agent name
             response_message = AIMessage(
                 content=f"**Log Expert Analysis:**\n\n{analysis_content}",
                 name="log_expert"  # Important: Identifies message source
             )
-            
+
             return {
                 "messages": [response_message],
                 "agent_consultation_count": agent_counts
             }
-        
+
         else:
             logger.warning("No messages in ReAct result")
             return {
@@ -998,10 +998,10 @@ Investigate this {status_code} error in {service}. Use fetch_service_logs to ret
                 )],
                 "agent_consultation_count": agent_counts
             }
-    
+
     except Exception as e:
         logger.error(f"Log Expert encountered error: {str(e)}", exc_info=True)
-        
+
         # Return error message (enables supervisor to route elsewhere)
         error_message = AIMessage(
             content=f"""**Log Expert Error:**
@@ -1011,7 +1011,7 @@ Encountered an error during analysis: {str(e)}
 Recommendation: Route to infrastructure expert or conclude investigation with findings so far.""",
             name="log_expert"
         )
-        
+
         return {
             "messages": [error_message],
             "agent_consultation_count": agent_counts
@@ -1144,40 +1144,40 @@ Example Output:
 def infra_expert_node(state: AlertTeamState) -> Dict[str, Any]:
     """
     Infrastructure Expert Agent - Diagnoses container and infrastructure issues.
-    
+
     Uses ReAct pattern with check_container_health tool.
     Increments agent_consultation_count for budget tracking.
-    
+
     Args:
         state (AlertTeamState): Current graph state
-    
+
     Returns:
         dict: State updates with infrastructure analysis and consultation count
     """
     logger.info("=" * 60)
     logger.info("=== INFRASTRUCTURE EXPERT: Analyzing Container Health ===")
     logger.info("=" * 60)
-    
+
     # ========================================================================
     # 1. GATHER CONTEXT
     # ========================================================================
-    
+
     alert_info = state.get("alert_info", {})
     service = alert_info.get("service", "unknown")
     status_code = alert_info.get("status_code", 0)
     historical_context = state.get("historical_context", "")
-    
+
     # Increment consultation count
     agent_counts = state.get("agent_consultation_count", {}).copy()
     agent_counts["infra_expert"] = agent_counts.get("infra_expert", 0) + 1
-    
+
     logger.info(f"Service: {service}, Status: {status_code}")
     logger.info(f"Infrastructure Expert consultation #{agent_counts['infra_expert']}")
-    
+
     # ========================================================================
     # 2. BUILD SYSTEM MESSAGE
     # ========================================================================
-    
+
     system_message = f"""{INFRA_EXPERT_SYSTEM_PROMPT}
 
 **Alert Context:**
@@ -1191,56 +1191,56 @@ Error Message: {alert_info.get('error_message', 'Unknown error')}
 **Your Task:**
 Investigate infrastructure health for {service} ({status_code} error). Use check_container_health to inspect the container state.
 """
-    
+
     # ========================================================================
     # 3. CREATE REACT AGENT
     # ========================================================================
-    
+
     llm = get_llm(temperature=0.0)
     tools = [check_container_health]
-    
+
     agent = create_react_agent(llm, tools, prompt=system_message)
-    
+
     # ========================================================================
     # 4. EXECUTE REACT AGENT
     # ========================================================================
-    
+
     try:
         logger.info("Starting ReAct loop...")
-        
+
         agent_input = {
             "messages": [
                 HumanMessage(content=f"Check infrastructure health for {service} ({status_code} error)")
             ]
         }
-        
+
         result = agent.invoke(
             agent_input,
             config={"recursion_limit": 10}
         )
-        
+
         logger.info("✓ ReAct loop completed")
-        
+
         # ========================================================================
         # 5. EXTRACT ANALYSIS
         # ========================================================================
-        
+
         if result and "messages" in result:
             final_message = result["messages"][-1]
             analysis_content = final_message.content if hasattr(final_message, 'content') else str(final_message)
-            
+
             logger.info(f"Analysis preview: {analysis_content[:200]}...")
-            
+
             response_message = AIMessage(
                 content=f"**Infrastructure Expert Analysis:**\n\n{analysis_content}",
                 name="infra_expert"
             )
-            
+
             return {
                 "messages": [response_message],
                 "agent_consultation_count": agent_counts
             }
-        
+
         else:
             logger.warning("No messages in ReAct result")
             return {
@@ -1250,10 +1250,10 @@ Investigate infrastructure health for {service} ({status_code} error). Use check
                 )],
                 "agent_consultation_count": agent_counts
             }
-    
+
     except Exception as e:
         logger.error(f"Infrastructure Expert encountered error: {str(e)}", exc_info=True)
-        
+
         error_message = AIMessage(
             content=f"""**Infrastructure Expert Error:**
 
@@ -1262,7 +1262,7 @@ Encountered an error during analysis: {str(e)}
 Recommendation: Route to log expert or conclude investigation.""",
             name="infra_expert"
         )
-        
+
         return {
             "messages": [error_message],
             "agent_consultation_count": agent_counts
@@ -1324,19 +1324,19 @@ logger = logging.getLogger(__name__)
 def route_supervisor_decision(state: AlertTeamState) -> Literal["log_expert", "infra_expert", "human_approval"]:
     """
     Conditional edge: Route based on supervisor's decision.
-    
+
     Reads state["next_worker"] and returns the node name to route to.
-    
+
     Args:
         state (AlertTeamState): Current graph state
-    
+
     Returns:
         str: Next node name ("log_expert" | "infra_expert" | "human_approval")
     """
     next_worker = state.get("next_worker", "FINISH")
-    
+
     logger.info(f"→ Routing Decision: {next_worker}")
-    
+
     if next_worker == "FINISH":
         return "human_approval"  # Investigation complete → HITL
     elif next_worker == "log_expert":
@@ -1356,17 +1356,17 @@ def route_supervisor_decision(state: AlertTeamState) -> Literal["log_expert", "i
 def memory_recall_node(state: AlertTeamState):
     """Placeholder: Will query ChromaDB for similar incidents."""
     from auto_healer.memory import query_past_incidents
-    
+
     logger.info("=== Memory Recall: Searching for Similar Incidents ===")
-    
+
     alert_info = state.get("alert_info", {})
     historical_context = query_past_incidents(alert_info, top_k=3)
-    
+
     if "No similar past incidents" in historical_context:
         logger.info("No similar past incidents found")
     else:
         logger.info(f"Found similar incidents (preview): {historical_context[:100]}...")
-    
+
     return {"historical_context": historical_context}
 
 
@@ -1374,19 +1374,19 @@ def human_approval_node(state: AlertTeamState):
     """Placeholder: Will pause for human approval (Phase 4)."""
     from rich.console import Console
     from rich.panel import Panel
-    
+
     console = Console()
-    
+
     logger.info("=== Human-in-the-Loop: Approval Required ===")
-    
+
     # Compile RCA report from agent messages
     messages = state.get("messages", [])
     alert_info = state.get("alert_info", {})
-    
+
     # Extract agent analyses
     log_analysis = [m.content for m in messages if hasattr(m, 'name') and m.name == 'log_expert']
     infra_analysis = [m.content for m in messages if hasattr(m, 'name') and m.name == 'infra_expert']
-    
+
     # Build RCA report
     rca_report = f"""
 ## ROOT CAUSE ANALYSIS REPORT
@@ -1400,23 +1400,23 @@ def human_approval_node(state: AlertTeamState):
 **INVESTIGATION FINDINGS:**
 
 """
-    
+
     if log_analysis:
         rca_report += f"**Log Expert Analysis:**\n\n{log_analysis[-1]}\n\n"
-    
+
     if infra_analysis:
         rca_report += f"**Infrastructure Expert Analysis:**\n\n{infra_analysis[-1]}\n\n"
-    
+
     if not log_analysis and not infra_analysis:
         rca_report += "*No detailed findings from specialists*\n"
-    
+
     # Display RCA (for now, no user input - Phase 4 will add)
     console.print("\n" + "=" * 80)
     console.print(Panel(rca_report, title="ROOT CAUSE ANALYSIS", border_style="yellow"))
     console.print("=" * 80 + "\n")
-    
+
     logger.info("RCA report displayed (approval flow will be added in Phase 4)")
-    
+
     # For Phase 3, auto-approve for testing
     return {
         "approved": True,
@@ -1427,20 +1427,20 @@ def human_approval_node(state: AlertTeamState):
 def memory_commit_node(state: AlertTeamState):
     """Placeholder: Will save approved RCA to ChromaDB (Phase 4)."""
     from auto_healer.memory import save_incident
-    
+
     if not state.get("approved", False):
         logger.info("Skipping memory commit (not approved)")
         return {}
-    
+
     logger.info("Committing RCA to long-term memory...")
-    
+
     rca_report = state.get("rca_report", "")
     alert_info = state["alert_info"]
-    
+
     save_incident(rca_report, alert_info)
-    
+
     logger.info("✓ RCA committed to memory")
-    
+
     return {}
 
 
@@ -1451,65 +1451,65 @@ def memory_commit_node(state: AlertTeamState):
 def create_graph():
     """
     Create the LangGraph state machine for multi-agent orchestration.
-    
+
     Graph Flow:
     1. memory_recall: Query ChromaDB for similar incidents
     2. supervisor: Decide which agent to route to
     3. [workers]: Log Expert OR Infrastructure Expert (loop back to supervisor)
     4. human_approval: Pause for human review
     5. memory_commit: Save approved RCA
-    
+
     Returns:
         CompiledGraph: Compiled LangGraph ready for execution
     """
     logger.info("Building LangGraph workflow...")
-    
+
     # Initialize state graph
     workflow = StateGraph(AlertTeamState)
-    
+
     # ========================================================================
     # ADD NODES
     # ========================================================================
-    
+
     workflow.add_node("memory_recall", memory_recall_node)
     workflow.add_node("supervisor", supervisor_node)
     workflow.add_node("log_expert", log_expert_node)
     workflow.add_node("infra_expert", infra_expert_node)
     workflow.add_node("human_approval", human_approval_node)
     workflow.add_node("memory_commit", memory_commit_node)
-    
+
     logger.info("✓ Nodes added: memory_recall, supervisor, log_expert, infra_expert, human_approval, memory_commit")
-    
+
     # ========================================================================
     # SET ENTRY POINT
     # ========================================================================
-    
+
     workflow.set_entry_point("memory_recall")
     logger.info("✓ Entry point set: memory_recall")
-    
+
     # ========================================================================
     # ADD FIXED EDGES (Unconditional transitions)
     # ========================================================================
-    
+
     # Always go to supervisor after memory recall
     workflow.add_edge("memory_recall", "supervisor")
-    
+
     # Workers always return to supervisor for next routing decision
     workflow.add_edge("log_expert", "supervisor")
     workflow.add_edge("infra_expert", "supervisor")
-    
+
     # After HITL, commit to memory
     workflow.add_edge("human_approval", "memory_commit")
-    
+
     # After memory commit, end graph
     workflow.add_edge("memory_commit", END)
-    
+
     logger.info("✓ Fixed edges added")
-    
+
     # ========================================================================
     # ADD CONDITIONAL EDGES (Dynamic routing)
     # ========================================================================
-    
+
     # Supervisor decides: route to worker OR finish
     workflow.add_conditional_edges(
         "supervisor",  # Source node
@@ -1520,21 +1520,21 @@ def create_graph():
             "human_approval": "human_approval"
         }  # Mapping: function return value → node name
     )
-    
+
     logger.info("✓ Conditional edges added")
-    
+
     # ========================================================================
     # COMPILE GRAPH
     # ========================================================================
-    
+
     # MemorySaver enables state persistence (checkpointing)
     # Allows resuming from breakpoints, viewing state history
     memory = MemorySaver()
-    
+
     compiled_graph = workflow.compile(checkpointer=memory)
-    
+
     logger.info("✓ Graph compiled successfully")
-    
+
     return compiled_graph
 
 
@@ -1545,10 +1545,10 @@ def create_graph():
 def visualize_graph(graph):
     """
     Generate Mermaid diagram of the graph structure.
-    
+
     Args:
         graph: Compiled LangGraph
-    
+
     Returns:
         str: Mermaid diagram string
     """
@@ -1834,13 +1834,13 @@ graph.invoke(initial_state, config={"recursion_limit": 15})
 ```python
 def visualize_state_history(graph, initial_state):
     states = []
-    
+
     for event in graph.stream(initial_state, config={"recursion_limit": 15}):
         states.append(event)
         print(f"Node: {event.keys()}")
         print(f"Messages: {len(event.get('messages', []))}")
         print("---")
-    
+
     return states
 ```
 
@@ -1936,7 +1936,7 @@ Proceed to `LESSON_PHASE4.md` when ready for integration testing.
 
 **End of Phase 3 Lesson**
 
-✅ Multi-agent system built  
-✅ LangGraph orchestration working  
-✅ Structured outputs preventing hallucination  
+✅ Multi-agent system built
+✅ LangGraph orchestration working
+✅ Structured outputs preventing hallucination
 ✅ Ready for Phase 4: Integration Testing & HITL

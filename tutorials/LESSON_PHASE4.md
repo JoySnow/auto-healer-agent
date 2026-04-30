@@ -278,24 +278,24 @@ console = Console()
 def memory_recall_node(state: AlertTeamState) -> Dict[str, Any]:
     """
     Query ChromaDB for similar past incidents.
-    
+
     Runs at graph entry point (before supervisor).
     Enriches investigation with historical context.
     """
     logger.info("=" * 60)
     logger.info("=== MEMORY RECALL: Searching for Similar Incidents ===")
     logger.info("=" * 60)
-    
+
     alert_info = state.get("alert_info", {})
-    
+
     # Query ChromaDB (semantic search)
     historical_context = query_past_incidents(alert_info, top_k=3)
-    
+
     if "No similar past incidents" in historical_context:
         logger.info("✓ No similar past incidents found (empty memory or no matches)")
     else:
         logger.info(f"✓ Found similar incidents (preview): {historical_context[:150]}...")
-    
+
     return {"historical_context": historical_context}
 
 
@@ -306,33 +306,33 @@ def memory_recall_node(state: AlertTeamState) -> Dict[str, Any]:
 def human_approval_node(state: AlertTeamState) -> Dict[str, Any]:
     """
     Pause graph execution for human approval of RCA report.
-    
+
     Workflow:
     1. Compile RCA from agent findings
     2. Display formatted report with Rich UI
     3. Prompt user: Approve (y), Reject (n), or Edit (e)
     4. Return approval decision and RCA
-    
+
     Args:
         state (AlertTeamState): Current graph state
-    
+
     Returns:
         dict: {"approved": bool, "rca_report": str}
     """
     logger.info("=" * 60)
     logger.info("=== HUMAN-IN-THE-LOOP: Approval Required ===")
     logger.info("=" * 60)
-    
+
     # ========================================================================
     # 1. COMPILE RCA REPORT FROM AGENT FINDINGS
     # ========================================================================
-    
+
     rca_report = compile_rca_report(state)
-    
+
     # ========================================================================
     # 2. DISPLAY RCA WITH RICH UI
     # ========================================================================
-    
+
     console.print("\n" + "=" * 80)
     console.print(Panel(
         rca_report,
@@ -341,50 +341,50 @@ def human_approval_node(state: AlertTeamState) -> Dict[str, Any]:
         padding=(1, 2)
     ))
     console.print("=" * 80 + "\n")
-    
+
     # ========================================================================
     # 3. PROMPT USER FOR APPROVAL
     # ========================================================================
-    
+
     console.print("[bold cyan]Review the RCA report above.[/bold cyan]")
     console.print("\nOptions:")
     console.print("  [green]y[/green] - Approve and save to memory")
     console.print("  [red]n[/red] - Reject (do not save)")
     console.print("  [yellow]e[/yellow] - Edit (future feature - for now, reject)")
-    
+
     approval_input = Prompt.ask(
         "\n🔍 Approve this RCA?",
         choices=["y", "n", "e"],
         default="n"
     )
-    
+
     # ========================================================================
     # 4. PROCESS USER DECISION
     # ========================================================================
-    
+
     if approval_input == "y":
         logger.info("✓ RCA approved by human")
         console.print("\n[bold green]✓ RCA approved and will be saved to memory.[/bold green]\n")
-        
+
         return {
             "approved": True,
             "rca_report": rca_report
         }
-    
+
     elif approval_input == "n":
         logger.info("✗ RCA rejected by human")
         console.print("\n[bold red]✗ RCA rejected. Not saved to memory.[/bold red]\n")
-        
+
         return {
             "approved": False,
             "rca_report": rca_report
         }
-    
+
     else:  # "e" - Edit
         logger.info("✎ Human requested edits")
         console.print("\n[bold yellow]✎ Edit feature coming in future phase.[/bold yellow]")
         console.print("[dim]For now, RCA will be rejected. You can re-run investigation if needed.[/dim]\n")
-        
+
         return {
             "approved": False,
             "rca_report": rca_report
@@ -394,47 +394,47 @@ def human_approval_node(state: AlertTeamState) -> Dict[str, Any]:
 def compile_rca_report(state: AlertTeamState) -> str:
     """
     Build formatted RCA report from agent findings.
-    
+
     Includes:
     - Alert metadata
     - Agent analyses (log_expert, infra_expert)
     - Recommended actions
-    
+
     Args:
         state (AlertTeamState): Current graph state
-    
+
     Returns:
         str: Formatted RCA report (Markdown)
     """
     alert_info = state["alert_info"]
     messages = state["messages"]
-    
+
     # Extract agent analyses from messages
     log_analysis = [
         m.content for m in messages
         if hasattr(m, 'name') and m.name == 'log_expert'
     ]
-    
+
     infra_analysis = [
         m.content for m in messages
         if hasattr(m, 'name') and m.name == 'infra_expert'
     ]
-    
+
     supervisor_decisions = [
         m.content for m in messages
         if "Supervisor Decision" in m.content or "Next:" in m.content
     ]
-    
+
     # ========================================================================
     # BUILD REPORT
     # ========================================================================
-    
+
     report = f"""
 ## ALERT INFORMATION
 
-**Service:** {alert_info.get('service', 'unknown')}  
-**Status Code:** {alert_info.get('status_code', 0)}  
-**Error Message:** {alert_info.get('error_message', 'Unknown error')}  
+**Service:** {alert_info.get('service', 'unknown')}
+**Status Code:** {alert_info.get('status_code', 0)}
+**Error Message:** {alert_info.get('error_message', 'Unknown error')}
 **Timestamp:** {alert_info.get('timestamp', 'Unknown')}
 
 ---
@@ -442,19 +442,19 @@ def compile_rca_report(state: AlertTeamState) -> str:
 ## INVESTIGATION FINDINGS
 
 """
-    
+
     # Add Log Expert analysis
     if log_analysis:
         report += "### Log Expert Analysis:\n\n"
         report += log_analysis[-1]  # Most recent
         report += "\n\n---\n\n"
-    
+
     # Add Infrastructure Expert analysis
     if infra_analysis:
         report += "### Infrastructure Expert Analysis:\n\n"
         report += infra_analysis[-1]  # Most recent
         report += "\n\n---\n\n"
-    
+
     # If no specialist findings
     if not log_analysis and not infra_analysis:
         report += "*No detailed findings from specialist agents.*\n\n"
@@ -462,13 +462,13 @@ def compile_rca_report(state: AlertTeamState) -> str:
         report += "- Investigation was inconclusive\n"
         report += "- Agents reached budget limits\n"
         report += "- Alert was for testing/chaos scenario\n\n"
-    
+
     # Add supervisor decision summary
     if supervisor_decisions:
         report += "### Investigation Summary:\n\n"
         report += supervisor_decisions[-1]  # Final decision
         report += "\n"
-    
+
     return report
 
 
@@ -479,13 +479,13 @@ def compile_rca_report(state: AlertTeamState) -> str:
 def memory_commit_node(state: AlertTeamState) -> Dict[str, Any]:
     """
     Save human-approved RCA to ChromaDB.
-    
+
     Only executes if state["approved"] == True.
     Stores RCA for future incident retrieval (RAG).
-    
+
     Args:
         state (AlertTeamState): Current graph state
-    
+
     Returns:
         dict: Empty (end of graph)
     """
@@ -493,24 +493,24 @@ def memory_commit_node(state: AlertTeamState) -> Dict[str, Any]:
         logger.info("⊘ Skipping memory commit (RCA not approved)")
         console.print("[dim]RCA not saved to memory (rejected).[/dim]\n")
         return {}
-    
+
     logger.info("=" * 60)
     logger.info("=== MEMORY COMMIT: Saving RCA to Long-Term Memory ===")
     logger.info("=" * 60)
-    
+
     rca_report = state.get("rca_report", "")
     alert_info = state["alert_info"]
-    
+
     # Save to ChromaDB
     success = save_incident(rca_report, alert_info)
-    
+
     if success:
         logger.info("✓ RCA committed to memory successfully")
         console.print("[bold green]✓ RCA saved to memory. Future incidents will benefit from this knowledge.[/bold green]\n")
     else:
         logger.error("✗ Failed to commit RCA to memory")
         console.print("[bold red]✗ Error saving RCA to memory. Check logs.[/bold red]\n")
-    
+
     return {}
 ```
 
@@ -696,7 +696,7 @@ infra_expert_budget_exceeded = agent_counts.get("infra_expert", 0) >= MAX_AGENT_
 # Force FINISH if both budgets exhausted
 if log_expert_budget_exceeded and infra_expert_budget_exceeded:
     logger.warning("⚠️  Both agent budgets exhausted. Forcing FINISH.")
-    
+
     budget_exhausted_message = HumanMessage(
         content=f"""Investigation budget exhausted:
 - log_expert: {agent_counts.get('log_expert', 0)}/{MAX_AGENT_CONSULTATIONS} consultations
@@ -704,7 +704,7 @@ if log_expert_budget_exceeded and infra_expert_budget_exceeded:
 
 Proceeding to Human-in-the-Loop with findings gathered so far."""
     )
-    
+
     return {
         "next_worker": "FINISH",
         "messages": [budget_exhausted_message]
@@ -1116,8 +1116,8 @@ Proceed to `LESSON_PHASE5.md` for production polish.
 
 **End of Phase 4 Lesson**
 
-✅ End-to-end testing complete  
-✅ HITL approval workflow working  
-✅ Supervisor improvements implemented  
-✅ Memory recall validated  
+✅ End-to-end testing complete
+✅ HITL approval workflow working
+✅ Supervisor improvements implemented
+✅ Memory recall validated
 ✅ Ready for Phase 5: Production Polish
