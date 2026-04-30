@@ -10,8 +10,7 @@ System Prompt Focus: "You are a Senior Backend Software Engineer analyzing logs.
 from typing import Dict, Any
 import logging
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate
+from langgraph.prebuilt import create_react_agent
 
 from auto_healer.state import AlertTeamState
 from auto_healer.tools.docker_tools import fetch_service_logs
@@ -87,54 +86,52 @@ def log_expert_node(state: AlertTeamState) -> Dict[str, Any]:
     llm = get_llm()
     tools = [fetch_service_logs]
 
-    # Create prompt template
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", LOG_EXPERT_SYSTEM_PROMPT),
-        ("human", """Alert Information:
+    # Create ReAct agent with system message
+    system_message = f"""{LOG_EXPERT_SYSTEM_PROMPT}
+
+Alert Information:
 Service: {service}
 Status Code: {status_code}
-Error Message: {error_message}
+Error Message: {alert_info.get("error_message", "Unknown error")}
 
 Historical Context:
-{historical_context}
+{historical_context if historical_context else "No similar past incidents found."}
 
 Task: Analyze the logs for this service and identify the root cause of the error.
-Use the fetch_service_logs tool to retrieve recent logs."""),
-        ("placeholder", "{agent_scratchpad}"),
-    ])
+Use the fetch_service_logs tool to retrieve recent logs."""
 
-    # Create agent
-    agent = create_tool_calling_agent(llm, tools, prompt)
-    agent_executor = AgentExecutor(
-        agent=agent,
-        tools=tools,
-        verbose=True,
-        max_iterations=5,  # Limit iterations for safety
-        handle_parsing_errors=True  # Enable reflection on parsing errors
-    )
-
-    # Prepare input
-    agent_input = {
-        "service": service,
-        "status_code": status_code,
-        "error_message": alert_info.get("error_message", "Unknown error"),
-        "historical_context": historical_context if historical_context else "No similar past incidents found."
-    }
+    # Create ReAct agent
+    agent = create_react_agent(llm, tools, state_modifier=system_message)
 
     try:
-        # Execute agent
-        result = agent_executor.invoke(agent_input)
+        # Execute agent - prepare initial messages
+        agent_input = {
+            "messages": [
+                HumanMessage(content=f"Investigate the {status_code} error in {service}")
+            ]
+        }
+
+        # Execute with recursion limit
+        result = agent.invoke(agent_input, {"recursion_limit": 10})
 
         logger.info("Log Expert analysis complete")
-        logger.debug(f"Result: {result.get('output', '')[:200]}...")
 
-        # Create response message
-        response_message = AIMessage(
-            content=f"**Log Expert Analysis:**\n\n{result.get('output', 'No analysis available')}",
-            name="log_expert"
-        )
+        # Extract final message
+        if result and "messages" in result:
+            final_message = result["messages"][-1]
+            analysis_content = final_message.content if hasattr(final_message, 'content') else str(final_message)
+            logger.debug(f"Result: {analysis_content[:200]}...")
 
-        return {"messages": [response_message]}
+            # Create response message
+            response_message = AIMessage(
+                content=f"**Log Expert Analysis:**\n\n{analysis_content}",
+                name="log_expert"
+            )
+
+            return {"messages": [response_message]}
+        else:
+            logger.warning("No messages in result")
+            return {"messages": [AIMessage(content="**Log Expert**: No analysis generated", name="log_expert")]}
 
     except Exception as e:
         logger.error(f"Log Expert encountered error: {str(e)}")
