@@ -178,7 +178,39 @@ pytest tests/
 - `/agent/memory.py`: ChromaDB RAG implementation for long-term incident memory
 - `/agent/nodes/`: Individual agent nodes (Supervisor, Log Expert, Infra Expert)
 
-## 7. Project Development Phases
+## 7. Documentation Structure
+
+The project has comprehensive documentation organized by purpose:
+
+### Core Documentation (`/docs/`)
+- **ARCHITECTURE.md**: Architectural decisions and design rationale
+- **AGENT_SPEC.md**: Agent personas and system prompts
+- **BLUEPRINT.md**: Project execution plan and milestones
+
+### Development Documentation (`/docs/development/`)
+- **PROGRESS.md**: Development progress tracking
+- **SUPERVISOR_IMPROVEMENTS.md**: Supervisor agent enhancements
+
+### Testing Documentation (`/docs/testing/`)
+- **TESTING.md**: Infrastructure testing results
+- **PHASE4_RESULTS.md**: Phase 4 integration test results
+- **PHASE4_502_TEST.md**: Specific 502 error test case
+
+### Educational Tutorials (`/tutorials/`)
+- **README.md**: Complete learning path overview (16-24 hours)
+- **LESSON_PHASE1.md**: Phase 1 - Infrastructure & Testing Environment
+- **LESSON_PHASE2.md**: Phase 2 - Perception, Tools & Memory
+- **LESSON_PHASE3.md**: Phase 3 - Multi-Agent Orchestration
+- **LESSON_PHASE4.md**: Phase 4 - Integration Testing & HITL
+- **LESSON_PHASE5.md**: Phase 5 - Production Polish
+- **SUMMARY.md**: Key architectural decisions & trade-offs
+
+**When to reference tutorials**:
+- User asks "how was this built?" → Point to `/tutorials/README.md`
+- User asks about specific pattern → Reference relevant lesson phase
+- User asks about design decisions → Reference `/tutorials/SUMMARY.md`
+
+## 8. Project Development Phases
 
 - **Phase 1**: Infrastructure (dummy microservices, chaos injection, Docker setup)
 - **Phase 2**: Tools & Memory (Docker SDK log fetcher, ChromaDB initialization)
@@ -186,6 +218,8 @@ pytest tests/
 - **Phase 4**: Integration (HITL gates, end-to-end testing)
 - **Phase 5**: Polish (Rich CLI, documentation, type hints)
 
-## 8. Security & Privacy
+**Status**: All phases complete ✅
+
+## 9. Security & Privacy
 
 All execution is local. Application logs (which may contain PII or proprietary business logic) never leave the local machine. This is a core design constraint - **do not introduce cloud API dependencies** for the agent's core reasoning or memory storage.
