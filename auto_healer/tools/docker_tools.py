@@ -19,7 +19,14 @@ except ImportError:
     DOCKER_AVAILABLE = False
     logging.warning("Docker SDK not installed. Tools will return error messages.")
 
+import os
+
 logger = logging.getLogger(__name__)
+
+# Podman compatibility: If using podman, set DOCKER_HOST to podman socket
+# For podman-machine on macOS: export DOCKER_HOST="unix:///Users/<user>/.local/share/containers/podman/machine/podman.sock"
+# Or use: podman system connection default
+# The docker Python SDK will work with podman's docker-compatible API
 
 
 def fetch_service_logs(service_name: str, tail_lines: int = 100) -> str:
