@@ -1109,11 +1109,11 @@ A: Agent consultations (per-agent budget). Prevents diminishing returns when evi
 Now that the system works end-to-end, polish for open source release:
 
 **What You'll Build**:
-- Type checking (mypy)
-- Unit tests (pytest)
-- Code formatting (ruff/black)
+- Type checking (mypy strict mode)
+- Unit tests (pytest, 41 tests)
+- Code formatting (ruff linter + formatter)
 - Comprehensive README
-- Pre-commit hooks
+- Pre-commit hooks (automated quality)
 
 **Why It Matters**:
 - Production code needs maintainability
