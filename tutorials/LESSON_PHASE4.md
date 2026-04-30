@@ -1,5 +1,19 @@
 # Phase 4 Lesson: Integration Testing & Human-in-the-Loop
 
+## Table of Contents
+
+- [4.1 Overview](#41-overview)
+- [4.2 Prerequisites](#42-prerequisites)
+- [4.3 Core Concepts](#43-core-concepts)
+- [4.4 Step-by-Step Implementation](#44-step-by-step-implementation)
+- [4.5 Validation Checkpoints](#45-validation-checkpoints)
+- [4.6 Common Pitfalls](#46-common-pitfalls)
+- [4.7 Exercises](#47-exercises)
+- [4.8 Key Takeaways](#48-key-takeaways)
+- [4.9 Next Steps](#49-next-steps)
+
+---
+
 ## 4.1 Overview
 
 **What You'll Build**: Complete HITL approval workflow, end-to-end test suite for all error scenarios, and supervisor improvements based on test findings.

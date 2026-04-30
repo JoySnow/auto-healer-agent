@@ -1,5 +1,26 @@
 # Educational Lessons: Building an AI Agent from Scratch
 
+## Table of Contents
+
+- [Welcome! 👋](#welcome-)
+- [📚 Lesson Structure](#-lesson-structure)
+- [🗺️ Learning Path](#️-learning-path)
+- [🎯 Learning Objectives](#-learning-objectives)
+- [🛠️ Prerequisites](#️-prerequisites)
+- [⏱️ Time Commitment](#️-time-commitment)
+- [📖 How to Use These Lessons](#-how-to-use-these-lessons)
+- [🚀 Getting Started](#-getting-started)
+- [🎓 What You'll Have Built](#-what-youll-have-built)
+- [💡 Tips for Success](#-tips-for-success)
+- [🤝 Getting Help](#-getting-help)
+- [📊 Project Stats](#-project-stats)
+- [🌟 What's Next?](#-whats-next)
+- [📜 License](#-license)
+- [🙏 Acknowledgments](#-acknowledgments)
+- [🚦 Ready to Start?](#-ready-to-start)
+
+---
+
 ## Welcome! 👋
 
 This lesson series teaches you how to build a **production-ready multi-agent AI system** from the ground up. You'll learn by doing - following the exact process used to create the Auto-Healer Agent, a system that autonomously investigates microservice errors and generates root cause analysis reports.

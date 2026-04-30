@@ -1,5 +1,19 @@
 # Phase 2 Lesson: Perception, Tools & Memory
 
+## Table of Contents
+
+- [2.1 Overview](#21-overview)
+- [2.2 Prerequisites](#22-prerequisites)
+- [2.3 Core Concepts](#23-core-concepts)
+- [2.4 Step-by-Step Implementation](#24-step-by-step-implementation)
+- [2.5 Validation Checkpoints](#25-validation-checkpoints)
+- [2.6 Common Pitfalls](#26-common-pitfalls)
+- [2.7 Exercises](#27-exercises)
+- [2.8 Key Takeaways](#28-key-takeaways)
+- [2.9 Next Steps](#29-next-steps)
+
+---
+
 ## 2.1 Overview
 
 **What You'll Build**: Docker SDK tools for log fetching and health checks, ChromaDB memory system for learning from past incidents, and local LLM configuration with Ollama.

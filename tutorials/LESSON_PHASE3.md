@@ -1,5 +1,19 @@
 # Phase 3 Lesson: Multi-Agent Orchestration with LangGraph
 
+## Table of Contents
+
+- [3.1 Overview](#31-overview)
+- [3.2 Prerequisites](#32-prerequisites)
+- [3.3 Core Concepts](#33-core-concepts)
+- [3.4 Step-by-Step Implementation](#34-step-by-step-implementation)
+- [3.5 Validation Checkpoints](#35-validation-checkpoints)
+- [3.6 Common Pitfalls](#36-common-pitfalls)
+- [3.7 Exercises](#37-exercises)
+- [3.8 Key Takeaways](#38-key-takeaways)
+- [3.9 Next Steps](#39-next-steps)
+
+---
+
 ## 3.1 Overview
 
 **What You'll Build**: Supervisor agent + 2 specialist agents (Log Expert, Infrastructure Expert) orchestrated with LangGraph state machine.

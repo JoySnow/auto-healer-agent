@@ -1,5 +1,18 @@
 # Phase 5 Lesson: Production Polish
 
+## Table of Contents
+
+- [5.1 Overview](#51-overview)
+- [5.2 Prerequisites](#52-prerequisites)
+- [5.3 Core Concepts](#53-core-concepts)
+- [5.4 Step-by-Step Implementation](#54-step-by-step-implementation)
+- [5.5 Validation Checkpoints](#55-validation-checkpoints)
+- [5.6 Common Pitfalls](#56-common-pitfalls)
+- [5.7 Key Takeaways](#57-key-takeaways)
+- [5.8 Next Steps](#58-next-steps)
+
+---
+
 ## 5.1 Overview
 
 **What You'll Build**: Type checking with mypy, unit tests with pytest, code formatting with ruff, comprehensive documentation, and pre-commit hooks.

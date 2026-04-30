@@ -1,5 +1,19 @@
 # Phase 1 Lesson: Infrastructure & Testing Environment
 
+## Table of Contents
+
+- [1.1 Overview](#11-overview)
+- [1.2 Prerequisites](#12-prerequisites)
+- [1.3 Core Concepts](#13-core-concepts)
+- [1.4 Step-by-Step Implementation](#14-step-by-step-implementation)
+- [1.5 Validation Checkpoints](#15-validation-checkpoints)
+- [1.6 Common Pitfalls](#16-common-pitfalls)
+- [1.7 Exercises](#17-exercises)
+- [1.8 Key Takeaways](#18-key-takeaways)
+- [1.9 Next Steps](#19-next-steps)
+
+---
+
 ## 1.1 Overview
 
 **What You'll Build**: Three FastAPI microservices (order, payment, inventory) with chaos injection endpoints, containerized with Docker.

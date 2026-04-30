@@ -1,5 +1,21 @@
 # Summary: Key Architectural Decisions
 
+## Table of Contents
+
+- [Overview](#overview)
+- [1. Multi-Agent vs Single Agent](#1-multi-agent-vs-single-agent)
+- [2. Pydantic Structured Outputs vs Plain Text](#2-pydantic-structured-outputs-vs-plain-text)
+- [3. Agent Consultation Budgets vs Unlimited Calls](#3-agent-consultation-budgets-vs-unlimited-calls)
+- [4. RAG Memory vs Fine-Tuning](#4-rag-memory-vs-fine-tuning)
+- [5. Local LLM (Ollama) vs Cloud API (OpenAI)](#5-local-llm-ollama-vs-cloud-api-openai)
+- [6. Context Window: 16K vs Default 2048](#6-context-window-16k-vs-default-2048)
+- [7. Docker SDK Tools vs REST API](#7-docker-sdk-tools-vs-rest-api)
+- [8. LangGraph vs Custom Orchestration](#8-langgraph-vs-custom-orchestration)
+- [9. ReAct Pattern vs Single-Shot](#9-react-pattern-vs-single-shot)
+- [Conclusion](#conclusion)
+
+---
+
 ## Overview
 
 This document summarizes the critical design choices made when building the Auto-Healer Agent. Understanding WHY these decisions were made is as important as knowing HOW to implement them.
