@@ -179,6 +179,7 @@ Examples:
             "alert_info": alert_info,
             "historical_context": "",
             "next_worker": "",
+            "agent_consultation_count": {"log_expert": 0, "infra_expert": 0},
             "approved": False,
             "rca_report": ""
         }

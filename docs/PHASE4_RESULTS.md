@@ -370,9 +370,17 @@ The Auto-Healer Agent demonstrated:
 - ✅ Professional terminal UI with Rich library
 
 **Identified Improvements Needed:**
-- Supervisor needs "inconclusive investigation" pathway for ambiguous scenarios
-- Per-agent consultation budgets to prevent diminishing returns
-- Earlier HITL trigger for edge cases (iteration 10)
+- ✅ Supervisor needs "inconclusive investigation" pathway for ambiguous scenarios (IMPLEMENTED)
+- ✅ Per-agent consultation budgets to prevent diminishing returns (IMPLEMENTED - max 3 per agent)
+- ⏭️ Earlier HITL trigger for edge cases (iteration 10) (DEFERRED - budget enforcement solves the issue)
+
+**Supervisor Improvements Implemented:**
+See [SUPERVISOR_IMPROVEMENTS.md](SUPERVISOR_IMPROVEMENTS.md) for full details.
+- Per-agent consultation budgets (MAX=3)
+- Enhanced supervisor prompt with "inconclusive" guidance
+- Budget status visibility in LLM prompts
+- Forced FINISH when both budgets exhausted
+- 502 test now completes in ~5min with clean FINISH (was ~6min with circuit breaker)
 
 The agent is **ready for production-style testing** with additional error scenarios and supervisor prompt tuning.
 

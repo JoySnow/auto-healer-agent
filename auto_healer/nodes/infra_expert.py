@@ -70,11 +70,13 @@ def infra_expert_node(state: AlertTeamState) -> Dict[str, Any]:
     This node creates a tool-calling agent that can use check_container_health
     to inspect Docker container state and resource usage.
 
+    Increments the agent_consultation_count for infra_expert.
+
     Args:
         state: Current AlertTeamState containing alert_info and messages
 
     Returns:
-        dict: Updated state with new messages containing infrastructure analysis
+        dict: Updated state with new messages containing infrastructure analysis and incremented consultation count
     """
     logger.info("=== Infrastructure Expert Agent Activated ===")
 
@@ -84,7 +86,12 @@ def infra_expert_node(state: AlertTeamState) -> Dict[str, Any]:
     status_code = alert_info.get("status_code", 0)
     historical_context = state.get("historical_context", "")
 
+    # Increment consultation count
+    agent_counts = state.get("agent_consultation_count", {}).copy()
+    agent_counts["infra_expert"] = agent_counts.get("infra_expert", 0) + 1
+
     logger.info(f"Analyzing infrastructure for service: {service}, status: {status_code}")
+    logger.info(f"Infrastructure Expert consultation #{agent_counts['infra_expert']}")
 
     # Initialize LLM with tools
     llm = get_llm()
@@ -132,10 +139,16 @@ Use the check_container_health tool to inspect the container state."""
                 name="infra_expert"
             )
 
-            return {"messages": [response_message]}
+            return {
+                "messages": [response_message],
+                "agent_consultation_count": agent_counts
+            }
         else:
             logger.warning("No messages in result")
-            return {"messages": [AIMessage(content="**Infrastructure Expert**: No analysis generated", name="infra_expert")]}
+            return {
+                "messages": [AIMessage(content="**Infrastructure Expert**: No analysis generated", name="infra_expert")],
+                "agent_consultation_count": agent_counts
+            }
 
     except Exception as e:
         logger.error(f"Infrastructure Expert encountered error: {str(e)}")
@@ -146,4 +159,7 @@ Use the check_container_health tool to inspect the container state."""
             name="infra_expert"
         )
 
-        return {"messages": [error_message]}
+        return {
+            "messages": [error_message],
+            "agent_consultation_count": agent_counts
+        }

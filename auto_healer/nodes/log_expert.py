@@ -66,11 +66,13 @@ def log_expert_node(state: AlertTeamState) -> Dict[str, Any]:
     This node creates a tool-calling agent that can use fetch_service_logs
     to retrieve and analyze container logs for debugging.
 
+    Increments the agent_consultation_count for log_expert.
+
     Args:
         state: Current AlertTeamState containing alert_info and messages
 
     Returns:
-        dict: Updated state with new messages containing log analysis
+        dict: Updated state with new messages containing log analysis and incremented consultation count
     """
     logger.info("=== Log Expert Agent Activated ===")
 
@@ -80,7 +82,12 @@ def log_expert_node(state: AlertTeamState) -> Dict[str, Any]:
     status_code = alert_info.get("status_code", 0)
     historical_context = state.get("historical_context", "")
 
+    # Increment consultation count
+    agent_counts = state.get("agent_consultation_count", {}).copy()
+    agent_counts["log_expert"] = agent_counts.get("log_expert", 0) + 1
+
     logger.info(f"Analyzing logs for service: {service}, status: {status_code}")
+    logger.info(f"Log Expert consultation #{agent_counts['log_expert']}")
 
     # Initialize LLM with tools
     llm = get_llm()
@@ -128,10 +135,16 @@ Use the fetch_service_logs tool to retrieve recent logs."""
                 name="log_expert"
             )
 
-            return {"messages": [response_message]}
+            return {
+                "messages": [response_message],
+                "agent_consultation_count": agent_counts
+            }
         else:
             logger.warning("No messages in result")
-            return {"messages": [AIMessage(content="**Log Expert**: No analysis generated", name="log_expert")]}
+            return {
+                "messages": [AIMessage(content="**Log Expert**: No analysis generated", name="log_expert")],
+                "agent_consultation_count": agent_counts
+            }
 
     except Exception as e:
         logger.error(f"Log Expert encountered error: {str(e)}")
@@ -142,4 +155,7 @@ Use the fetch_service_logs tool to retrieve recent logs."""
             name="log_expert"
         )
 
-        return {"messages": [error_message]}
+        return {
+            "messages": [error_message],
+            "agent_consultation_count": agent_counts
+        }
