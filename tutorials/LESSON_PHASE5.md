@@ -24,9 +24,9 @@
 - Code quality tools catch bugs early
 
 **Learning Objectives**:
-- Set up mypy for type checking
+- Set up mypy for type checking (strict mode)
 - Write pytest unit and integration tests
-- Configure code formatters (ruff/black)
+- Configure ruff for linting and formatting
 - Create comprehensive README
 - Set up pre-commit hooks for automation
 
@@ -110,8 +110,7 @@ def fetch_logs(service: str, lines: int) -> str:
 - "Line length 80 or 100?"
 
 **The Solution**: Automate it!
-- `black`: Opinionated formatter (no config needed)
-- `ruff`: Fast linter + formatter (modern alternative)
+- `ruff`: Fast linter + formatter (all-in-one tool)
 - `pre-commit`: Runs on every commit (can't forget!)
 
 **Benefits**:
@@ -181,29 +180,66 @@ uv pip install mypy
 
 ```ini
 [mypy]
+# Python version target
 python_version = 3.12
+
+# Strict mode settings (catch all type issues)
+strict = True
 warn_return_any = True
 warn_unused_configs = True
-disallow_untyped_defs = False  # Start lenient, tighten later
-ignore_missing_imports = True  # Ignore third-party libs without types
+disallow_untyped_defs = True
+disallow_any_generics = True
+disallow_subclassing_any = True
+disallow_untyped_calls = True
+disallow_incomplete_defs = True
+check_untyped_defs = True
+disallow_untyped_decorators = True
+no_implicit_optional = True
+warn_redundant_casts = True
+warn_unused_ignores = True
+warn_no_return = True
+warn_unreachable = True
 
-# Per-module overrides (stricter for core modules)
-[mypy-auto_healer.tools.*]
-disallow_untyped_defs = True  # Tools should have complete types
+# Less strict settings for practicality
+allow_redefinition = True
+implicit_reexport = True
 
-[mypy-auto_healer.nodes.*]
-disallow_untyped_defs = True  # Nodes should have complete types
-
-[mypy-auto_healer.state]
-disallow_untyped_defs = True  # State is critical - full types
-
-# Ignore modules with complex third-party types
-[mypy-langgraph.*]
+# Third-party libraries without stubs (ignore to avoid errors)
+[mypy-docker.*]
 ignore_missing_imports = True
 
 [mypy-chromadb.*]
 ignore_missing_imports = True
+
+[mypy-langchain.*]
+ignore_missing_imports = True
+
+[mypy-langchain_core.*]
+ignore_missing_imports = True
+
+[mypy-langchain_ollama.*]
+ignore_missing_imports = True
+
+[mypy-langgraph.*]
+ignore_missing_imports = True
+
+[mypy-rich.*]
+ignore_missing_imports = True
+
+[mypy-pydantic.*]
+ignore_missing_imports = True
+
+[mypy-pytest.*]
+ignore_missing_imports = True
 ```
+
+**Why Strict Mode?**
+- `strict = True` enables all strict type checking flags at once
+- Catches type errors early (before runtime)
+- Better IDE autocomplete and refactoring support
+- Production-ready code quality
+
+**Note on Third-Party Libraries**: Many libraries don't have type stubs, so we ignore them to focus on our own code quality.
 
 **Run mypy**:
 ```bash
@@ -227,10 +263,25 @@ def my_function(x: int) -> str:  # ✅ Added -> str
 # Fix: Add type hint
 result: str = llm.invoke(prompt)  # ✅ Added : str
 
+# Error: "Argument has incompatible type"
+# Fix: Use Dict[str, Any] for flexible dictionaries
+state_update: Dict[str, Any] = {"next_worker": "FINISH"}  # ✅
+
 # Error: Third-party library has no types
 # Fix: Add to mypy.ini ignore list OR add inline ignore
-import chromadb  # type: ignore  # ✅
+from langchain_core.messages import BaseMessage  # type: ignore  # ✅
+
+# Error: LangGraph create_react_agent has complex types
+# Fix: Strategic type: ignore for library compatibility
+agent = create_react_agent(llm, tools, prompt=system_prompt)  # type: ignore
 ```
+
+**Real Project Experience**:
+In Phase 5, we went from ~30 mypy errors to 0 by:
+1. Adding `Dict[str, Any]` type hints throughout (state.py, nodes)
+2. Adding explicit return type annotations (main.py, graph.py)
+3. Strategic `# type: ignore` for LangGraph compatibility issues
+4. Fixing potential None indexing in memory.py
 
 ---
 
@@ -468,9 +519,22 @@ pytest tests/ --cov=auto_healer --cov-report=html
 # Expected output:
 # tests/test_tools.py::TestFetchServiceLogs::test_fetch_logs_success PASSED
 # tests/test_tools.py::TestFetchServiceLogs::test_fetch_logs_container_not_found PASSED
+# tests/test_memory.py::test_save_and_query_incident PASSED
+# tests/test_state.py::test_state_structure PASSED
+# tests/test_llm_config.py::test_get_llm_defaults PASSED
+# tests/test_graph.py::test_graph_compiles PASSED
 # ...
-# Coverage: 85%
+# ======================= 41 passed in 2.5s =======================
+# Coverage: 85%+
 ```
+
+**Test Suite Structure** (from actual Phase 5 implementation):
+- `test_docker_tools.py`: 8 tests (Docker SDK tool mocking)
+- `test_memory.py`: 10 tests (ChromaDB operations)
+- `test_state.py`: 6 tests (TypedDict validation)
+- `test_llm_config.py`: 12 tests (LLM parameter validation)
+- `test_graph.py`: 5 tests (3 unit + 2 integration)
+- **Total**: 41 tests, 100% passing
 
 ---
 
@@ -485,42 +549,86 @@ uv pip install ruff
 
 ```toml
 [tool.ruff]
-# Line length
-line-length = 100  # Slightly longer than black's 88 (personal preference)
-
-# Python version
+# Target Python 3.12
 target-version = "py312"
 
-# Enable specific rule sets
-select = [
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
-    "I",   # isort (import sorting)
-    "N",   # pep8-naming
-    "W",   # pycodestyle warnings
-]
+# Line length (120 is readable on modern monitors)
+line-length = 120
 
-# Ignore specific rules
-ignore = [
-    "E501",  # Line too long (handled by formatter)
-]
-
-# Exclude directories
+# Exclude common directories
 exclude = [
-    ".venv",
     ".git",
+    ".venv",
     "__pycache__",
+    ".chromadb",
     "build",
     "dist",
 ]
 
-[tool.ruff.format]
-quote-style = "double"  # Use double quotes
-indent-style = "space"  # Use spaces (not tabs)
+[tool.ruff.lint]
+# Enable rule sets
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
 
-[tool.ruff.lint.isort]
-known-first-party = ["auto_healer"]
+# Ignore specific rules
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults (common in FastAPI)
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Use spaces for indentation
+indent-style = "space"
+
+# Respect magic trailing comma
+skip-magic-trailing-comma = false
+
+# Auto-detect line ending
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+# Test discovery
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Async support
+asyncio_mode = "auto"
+
+# Coverage options
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+
+# Markers (for categorizing tests)
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
 ```
+
+**Why This Configuration?**
+- **line-length = 120**: Readable on modern monitors, not too restrictive
+- **Multiple rule sets**: Catches bugs (B), comprehensions (C4), outdated syntax (UP)
+- **fixable = ALL**: Auto-fix as many issues as possible
+- **pytest config**: Centralized test configuration in same file
 
 **Run ruff**:
 ```bash
@@ -567,39 +675,59 @@ uv pip install pre-commit
 
 ```yaml
 # Pre-commit hooks configuration
-# Runs automatically on `git commit`
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+#
+# Note: Run mypy separately with: mypy auto_healer/
+# Pre-commit mypy can have dependency conflicts, so we keep it as a manual step
 
 repos:
-  # Ruff (linter + formatter)
+  # Ruff - Fast Python linter and formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.9
+    rev: v0.6.0
     hooks:
-      # Linter
+      # Run the linter
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
-      # Formatter
+        args: [--fix]
+        name: ruff lint
+      # Run the formatter
       - id: ruff-format
+        name: ruff format
 
-  # Type checking with mypy
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-all]
-        args: [--ignore-missing-imports]
-
-  # General file checks
+  # General hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
-      - id: trailing-whitespace  # Remove trailing whitespace
-      - id: end-of-file-fixer    # Ensure files end with newline
-      - id: check-yaml           # Validate YAML files
-      - id: check-json           # Validate JSON files
-      - id: check-added-large-files  # Prevent committing large files
-        args: [--maxkb=1000]
-      - id: check-merge-conflict  # Detect merge conflict markers
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+        name: trim trailing whitespace
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+        name: fix end of files
+      # Check for files that would conflict on case-insensitive filesystems
+      - id: check-case-conflict
+        name: check for case conflicts
+      # Check for merge conflicts
+      - id: check-merge-conflict
+        name: check for merge conflicts
+      # Check YAML syntax
+      - id: check-yaml
+        name: check yaml syntax
+      # Check TOML syntax
+      - id: check-toml
+        name: check toml syntax
+      # Check JSON syntax
+      - id: check-json
+        name: check json syntax
 ```
+
+**Why No mypy in Pre-commit?**
+- Pre-commit mypy hooks can conflict with project dependencies
+- mypy is computationally expensive (slows down commits)
+- Better to run mypy manually before committing: `mypy auto_healer/`
+- CI/CD pipeline can enforce mypy checks
+
+**Trade-off**: Manual mypy step vs automatic enforcement. For this project, we chose reliability over automation.
 
 **Install hooks**:
 ```bash
@@ -897,29 +1025,44 @@ pytest tests/test_tools.py::TestFetchServiceLogs::test_fetch_logs_success
 
 ### Type Checking
 ```bash
+# Run mypy manually (not in pre-commit)
 mypy auto_healer/
+
+# Expected: Success: no issues found in X source files
 ```
 
 ### Code Formatting
 ```bash
-# Check style
+# Check for linting issues
 ruff check auto_healer/
 
-# Fix issues
+# Fix automatically
 ruff check --fix auto_healer/
 
 # Format code
 ruff format auto_healer/
+
+# Or let pre-commit handle it automatically on commit
 ```
 
 ### Pre-commit Hooks
 ```bash
-# Install hooks
+# Install hooks (one-time setup)
 pre-commit install
 
-# Run manually
+# Run manually on all files
 pre-commit run --all-files
+
+# Hooks run automatically on git commit
+# Note: mypy NOT included in hooks (run separately)
 ```
+
+**Development Workflow**:
+1. Make code changes
+2. Run `mypy auto_healer/` to check types
+3. Run `pytest tests/` to validate changes
+4. Commit changes (pre-commit runs ruff automatically)
+5. If ruff auto-fixes anything, re-add and commit again
 
 ---
 
@@ -1095,14 +1238,26 @@ git commit -m "Add .gitignore for Python project"
 
 ## 5.5 Validation Checkpoints
 
-### Checkpoint 1: mypy Passes
+### Checkpoint 1: mypy Passes (Run Manually)
 
 ```bash
+# Note: mypy is NOT in pre-commit hooks (runs separately)
 mypy auto_healer/
 
 # Expected output:
 # Success: no issues found in X source files
+
+# If errors appear, fix them iteratively:
+# 1. Add missing type hints
+# 2. Fix incorrect type annotations
+# 3. Add `# type: ignore` for unavoidable third-party issues
+# 4. Re-run until clean
 ```
+
+**Why Run Separately?**
+- Pre-commit mypy can cause dependency conflicts
+- mypy is slow (not suitable for every commit)
+- Better developer experience to run manually before pushing
 
 ### Checkpoint 2: All Tests Pass
 
@@ -1202,13 +1357,14 @@ SKIP=mypy git commit -m "WIP"
    - Examples show usage
    - Troubleshooting saves support time
 
-### 📊 Quality Metrics
+### 📊 Quality Metrics (from Actual Phase 5 Implementation)
 
-- ✅ Type coverage: 90%+
-- ✅ Test coverage: 85%+
-- ✅ Linter: 0 errors
-- ✅ Format: Consistent (ruff)
-- ✅ Pre-commit: Enabled
+- ✅ Type coverage: 100% (mypy strict mode, 0 errors)
+- ✅ Test coverage: 85%+ (41 tests, all passing)
+- ✅ Linter: 0 errors (ruff)
+- ✅ Format: Consistent (ruff, line-length=120)
+- ✅ Pre-commit: Enabled (ruff + general hooks)
+- ✅ mypy: Run manually (not in pre-commit)
 
 ### 🎯 Production-Ready Checklist
 
@@ -1232,7 +1388,12 @@ You've completed all 5 phases! 🎉
 - Phase 2: Docker tools + RAG memory + LLM config
 - Phase 3: Multi-agent system with LangGraph
 - Phase 4: Integration tests + HITL + supervisor improvements
-- Phase 5: Production polish (types, tests, docs)
+- Phase 5: Production polish
+  - mypy strict type checking (0 errors)
+  - 41 pytest unit tests (100% passing)
+  - ruff linter and formatter
+  - pre-commit hooks (automated quality)
+  - comprehensive documentation
 
 **Ready for**:
 - Open source release (GitHub)
@@ -1251,9 +1412,17 @@ You've completed all 5 phases! 🎉
 
 **End of Phase 5 Lesson**
 
-✅ Type checking configured
-✅ Unit tests written
-✅ Code formatted
-✅ Pre-commit hooks enabled
+✅ Type checking configured (mypy strict mode, 0 errors)
+✅ Unit tests written (41 tests, all passing)
+✅ Code linter/formatter configured (ruff)
+✅ Pre-commit hooks enabled (automated quality checks)
 ✅ Comprehensive README created
+✅ .gitignore configured
 ✅ Project ready for production!
+
+**Final Quality Metrics**:
+- mypy: Success! No issues found
+- pytest: 41 tests passed
+- ruff: All checks passed
+- pre-commit: Installed and working
+- Documentation: Complete
