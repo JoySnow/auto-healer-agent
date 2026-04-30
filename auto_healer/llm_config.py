@@ -6,11 +6,13 @@ This module provides configuration for the local LLM (qwen2.5:14b via Ollama).
 CRITICAL: The context window (num_ctx) MUST be set to 16384 minimum.
 The default 2048 tokens will truncate application logs and cause silent reasoning failures.
 """
-from typing import Optional
+
 import logging
+from typing import Any
 
 try:
     from langchain_ollama import ChatOllama
+
     OLLAMA_AVAILABLE = True
 except ImportError:
     OLLAMA_AVAILABLE = False
@@ -20,11 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_llm(
-    model: str = "qwen2.5:14b",
-    num_ctx: int = 16384,
-    temperature: float = 0.0,
-    **kwargs
-) -> Optional[ChatOllama]:
+    model: str = "qwen2.5:14b", num_ctx: int = 16384, temperature: float = 0.0, **kwargs: Any
+) -> ChatOllama | None:
     """
     Initialize and return a ChatOllama LLM instance with proper configuration.
 
@@ -59,28 +58,19 @@ def get_llm(
         3. Test with: `ollama run qwen2.5:14b "Hello"`
     """
     if not OLLAMA_AVAILABLE:
-        raise RuntimeError(
-            "langchain-ollama not installed. "
-            "Install with: uv pip install langchain-ollama"
-        )
+        raise RuntimeError("langchain-ollama not installed. " "Install with: uv pip install langchain-ollama")
 
     # Safety check: Enforce minimum context window
     if num_ctx < 16384:
         logger.warning(
-            f"num_ctx={num_ctx} is too small! "
-            f"Agent needs 16384+ to analyze logs. Forcing num_ctx=16384."
+            f"num_ctx={num_ctx} is too small! " f"Agent needs 16384+ to analyze logs. Forcing num_ctx=16384."
         )
         num_ctx = 16384
 
     logger.info(f"Initializing ChatOllama with model={model}, num_ctx={num_ctx}, temperature={temperature}")
 
     try:
-        llm = ChatOllama(
-            model=model,
-            num_ctx=num_ctx,
-            temperature=temperature,
-            **kwargs
-        )
+        llm = ChatOllama(model=model, num_ctx=num_ctx, temperature=temperature, **kwargs)
 
         logger.info("ChatOllama LLM initialized successfully")
         return llm
@@ -114,7 +104,7 @@ def test_llm_connection(model: str = "qwen2.5:14b") -> bool:
 
     try:
         llm = get_llm(model=model)
-        response = llm.invoke("Hello")
+        response = llm.invoke("Hello")  # type: ignore[union-attr]
 
         logger.info(f"LLM connection test successful. Response: {response.content[:50]}...")
         return True
@@ -127,7 +117,7 @@ def test_llm_connection(model: str = "qwen2.5:14b") -> bool:
 # Model recommendations for different use cases
 RECOMMENDED_MODELS = {
     "default": "qwen2.5:14b",  # Best balance of capability and speed for M3 Pro
-    "fast": "qwen2.5:7b",       # Faster but less capable
+    "fast": "qwen2.5:7b",  # Faster but less capable
     "powerful": "qwen2.5:32b",  # More capable but slower, requires more RAM
 }
 

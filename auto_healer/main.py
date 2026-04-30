@@ -5,12 +5,13 @@ This module provides the command-line interface for running the auto-healer agen
 It loads alert data, initializes the graph, and executes the workflow with
 proper circuit breakers and error handling.
 """
+
 import argparse
 import json
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -18,22 +19,20 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from auto_healer.graph import create_graph, visualize_graph
-from auto_healer.memory import initialize_chromadb, get_memory_stats
+from auto_healer.memory import get_memory_stats, initialize_chromadb
 
 # Initialize Rich console for beautiful output
 console = Console()
 
 # Configure logging with Rich
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[RichHandler(console=console, rich_tracebacks=True)]
+    level=logging.INFO, format="%(message)s", handlers=[RichHandler(console=console, rich_tracebacks=True)]
 )
 
 logger = logging.getLogger(__name__)
 
 
-def load_alert(alert_path: str) -> Dict[str, Any]:
+def load_alert(alert_path: str) -> dict[str, Any]:
     """
     Load alert JSON file from path.
 
@@ -52,15 +51,15 @@ def load_alert(alert_path: str) -> Dict[str, Any]:
     if not alert_file.exists():
         raise FileNotFoundError(f"Alert file not found: {alert_path}")
 
-    with open(alert_file, 'r') as f:
-        alert_data = json.load(f)
+    with open(alert_file) as f:
+        alert_data: dict[str, Any] = json.load(f)
 
     logger.info(f"Loaded alert from: {alert_path}")
 
     return alert_data
 
 
-def display_banner():
+def display_banner() -> None:
     """Display welcome banner."""
     banner = """
     ╔═══════════════════════════════════════════════════════════╗
@@ -74,7 +73,7 @@ def display_banner():
     console.print(Panel(banner, style="bold blue"))
 
 
-def main():
+def main() -> int:
     """
     Main entry point for the auto-healer agent.
 
@@ -94,32 +93,19 @@ Examples:
 
   # Visualize the workflow graph
   python -m auto_healer.main --visualize-only
-        """
+        """,
+    )
+
+    parser.add_argument("--alert", type=str, help="Path to alert JSON file")
+
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+
+    parser.add_argument(
+        "--visualize-only", action="store_true", help="Only visualize the graph, don't run investigation"
     )
 
     parser.add_argument(
-        "--alert",
-        type=str,
-        help="Path to alert JSON file"
-    )
-
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug logging"
-    )
-
-    parser.add_argument(
-        "--visualize-only",
-        action="store_true",
-        help="Only visualize the graph, don't run investigation"
-    )
-
-    parser.add_argument(
-        "--max-iterations",
-        type=int,
-        default=15,
-        help="Maximum recursion limit for graph execution (default: 15)"
+        "--max-iterations", type=int, default=15, help="Maximum recursion limit for graph execution (default: 15)"
     )
 
     args = parser.parse_args()
@@ -164,14 +150,16 @@ Examples:
         console.print(f"\n[bold cyan]Loading alert from: {args.alert}[/bold cyan]")
         alert_info = load_alert(args.alert)
 
-        console.print(Panel(
-            f"Service: [bold]{alert_info.get('service', 'unknown')}[/bold]\n"
-            f"Status Code: [bold red]{alert_info.get('status_code', 0)}[/bold red]\n"
-            f"Error: {alert_info.get('error_message', 'Unknown')}\n"
-            f"Timestamp: {alert_info.get('timestamp', 'Unknown')}",
-            title="Alert Information",
-            border_style="red"
-        ))
+        console.print(
+            Panel(
+                f"Service: [bold]{alert_info.get('service', 'unknown')}[/bold]\n"
+                f"Status Code: [bold red]{alert_info.get('status_code', 0)}[/bold red]\n"
+                f"Error: {alert_info.get('error_message', 'Unknown')}\n"
+                f"Timestamp: {alert_info.get('timestamp', 'Unknown')}",
+                title="Alert Information",
+                border_style="red",
+            )
+        )
 
         # Prepare initial state
         initial_state = {
@@ -181,16 +169,14 @@ Examples:
             "next_worker": "",
             "agent_consultation_count": {"log_expert": 0, "infra_expert": 0},
             "approved": False,
-            "rca_report": ""
+            "rca_report": "",
         }
 
         # Execute graph
         console.print("\n[bold cyan]Starting autonomous investigation...[/bold cyan]\n")
 
         with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
+            SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
         ) as progress:
             task = progress.add_task("Running agent workflow...", total=None)
 
@@ -198,17 +184,16 @@ Examples:
                 # Invoke graph with circuit breaker (recursion limit)
                 final_state = graph.invoke(
                     initial_state,
-                    config={
-                        "recursion_limit": args.max_iterations,
-                        "configurable": {"thread_id": "main"}
-                    }
+                    config={"recursion_limit": args.max_iterations, "configurable": {"thread_id": "main"}},
                 )
 
                 progress.update(task, completed=True)
 
             except RecursionError:
                 console.print(f"\n[red]❌ Error: Graph exceeded maximum iterations ({args.max_iterations})[/red]")
-                console.print("[yellow]The agent may be stuck in a loop. Try increasing --max-iterations or check logs.[/yellow]")
+                console.print(
+                    "[yellow]The agent may be stuck in a loop. Try increasing --max-iterations or check logs.[/yellow]"
+                )
                 return 1
 
         # Display results
@@ -242,6 +227,7 @@ Examples:
         console.print(f"\n[red]❌ Unexpected error: {str(e)}[/red]")
         if args.debug:
             import traceback
+
             console.print("\n[dim]" + traceback.format_exc() + "[/dim]")
         return 1
 

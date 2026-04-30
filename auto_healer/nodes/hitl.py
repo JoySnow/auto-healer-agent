@@ -5,8 +5,10 @@ This node pauses the graph execution and asks a human to approve the RCA report
 before committing it to long-term memory. This implements the HITL pattern,
 ensuring the agent doesn't act autonomously without human oversight.
 """
-from typing import Dict, Any
+
 import logging
+from typing import Any
+
 from langchain_core.messages import HumanMessage
 
 from auto_healer.state import AlertTeamState
@@ -14,7 +16,7 @@ from auto_healer.state import AlertTeamState
 logger = logging.getLogger(__name__)
 
 
-def human_approval_node(state: AlertTeamState) -> Dict[str, Any]:
+def human_approval_node(state: AlertTeamState) -> dict[str, Any]:
     """
     Human-in-the-Loop Node - Pauses execution for human approval.
 
@@ -61,8 +63,8 @@ def human_approval_node(state: AlertTeamState) -> Dict[str, Any]:
     rca_sections.append("")
 
     for msg in messages:
-        if hasattr(msg, 'name') and msg.name in ['log_expert', 'infra_expert', 'supervisor']:
-            rca_sections.append(msg.content)
+        if hasattr(msg, "name") and msg.name in ["log_expert", "infra_expert", "supervisor"]:
+            rca_sections.append(msg.content)  # type: ignore[arg-type]
             rca_sections.append("")
 
     rca_sections.append("=" * 80)
@@ -78,35 +80,25 @@ def human_approval_node(state: AlertTeamState) -> Dict[str, Any]:
         try:
             approval_input = input("\n🔍 Approve this RCA and save to memory? (y/n/edit): ").strip().lower()
 
-            if approval_input in ['y', 'yes']:
+            if approval_input in ["y", "yes"]:
                 logger.info("Human approved RCA report")
 
                 approval_message = HumanMessage(
-                    content="**Human Approval:** RCA approved and will be committed to memory.",
-                    name="human"
+                    content="**Human Approval:** RCA approved and will be committed to memory.", name="human"
                 )
 
-                return {
-                    "approved": True,
-                    "rca_report": rca_report,
-                    "messages": [approval_message]
-                }
+                return {"approved": True, "rca_report": rca_report, "messages": [approval_message]}
 
-            elif approval_input in ['n', 'no']:
+            elif approval_input in ["n", "no"]:
                 logger.info("Human rejected RCA report")
 
                 rejection_message = HumanMessage(
-                    content="**Human Rejection:** RCA rejected. Will not be saved to memory.",
-                    name="human"
+                    content="**Human Rejection:** RCA rejected. Will not be saved to memory.", name="human"
                 )
 
-                return {
-                    "approved": False,
-                    "rca_report": rca_report,
-                    "messages": [rejection_message]
-                }
+                return {"approved": False, "rca_report": rca_report, "messages": [rejection_message]}
 
-            elif approval_input == 'edit':
+            elif approval_input == "edit":
                 print("\nProvide feedback or corrections:")
                 feedback = input("> ").strip()
 
@@ -115,14 +107,14 @@ def human_approval_node(state: AlertTeamState) -> Dict[str, Any]:
 
                     feedback_message = HumanMessage(
                         content=f"**Human Feedback:** {feedback}\n\nPlease revise the analysis based on this feedback.",
-                        name="human"
+                        name="human",
                     )
 
                     return {
                         "approved": False,
                         "needs_revision": True,
                         "rca_report": rca_report,
-                        "messages": [feedback_message]
+                        "messages": [feedback_message],
                     }
             else:
                 print("Invalid input. Please enter 'y', 'n', or 'edit'.")
@@ -132,18 +124,13 @@ def human_approval_node(state: AlertTeamState) -> Dict[str, Any]:
             print("\n\nInterrupted. Treating as rejection.")
 
             interruption_message = HumanMessage(
-                content="**Human Interruption:** Investigation interrupted. RCA not saved.",
-                name="human"
+                content="**Human Interruption:** Investigation interrupted. RCA not saved.", name="human"
             )
 
-            return {
-                "approved": False,
-                "rca_report": rca_report,
-                "messages": [interruption_message]
-            }
+            return {"approved": False, "rca_report": rca_report, "messages": [interruption_message]}
 
 
-def memory_recall_node(state: AlertTeamState) -> Dict[str, Any]:
+def memory_recall_node(state: AlertTeamState) -> dict[str, Any]:
     """
     Memory Recall Node - Queries ChromaDB for similar past incidents.
 
@@ -156,7 +143,7 @@ def memory_recall_node(state: AlertTeamState) -> Dict[str, Any]:
     Returns:
         dict: Updated state with historical_context from ChromaDB
     """
-    from auto_healer.memory import query_past_incidents, initialize_chromadb
+    from auto_healer.memory import initialize_chromadb, query_past_incidents
 
     logger.info("=== Memory Recall: Searching for Similar Incidents ===")
 
@@ -175,26 +162,16 @@ def memory_recall_node(state: AlertTeamState) -> Dict[str, Any]:
 
     # Create info message
     if historical_context:
-        recall_message = HumanMessage(
-            content=f"**Memory Recall:**\n\n{historical_context}",
-            name="memory"
-        )
-        return {
-            "historical_context": historical_context,
-            "messages": [recall_message]
-        }
+        recall_message = HumanMessage(content=f"**Memory Recall:**\n\n{historical_context}", name="memory")
+        return {"historical_context": historical_context, "messages": [recall_message]}
     else:
         recall_message = HumanMessage(
-            content="**Memory Recall:** No similar past incidents found in memory.",
-            name="memory"
+            content="**Memory Recall:** No similar past incidents found in memory.", name="memory"
         )
-        return {
-            "historical_context": "",
-            "messages": [recall_message]
-        }
+        return {"historical_context": "", "messages": [recall_message]}
 
 
-def memory_commit_node(state: AlertTeamState) -> Dict[str, Any]:
+def memory_commit_node(state: AlertTeamState) -> dict[str, Any]:
     """
     Memory Commit Node - Saves approved RCA to ChromaDB.
 
@@ -216,24 +193,18 @@ def memory_commit_node(state: AlertTeamState) -> Dict[str, Any]:
     if not approved:
         logger.info("RCA not approved, skipping memory commit")
 
-        skip_message = HumanMessage(
-            content="**Memory Commit:** Skipped (RCA not approved)",
-            name="memory"
-        )
+        skip_message = HumanMessage(content="**Memory Commit:** Skipped (RCA not approved)", name="memory")
 
         return {"messages": [skip_message]}
 
     # Get RCA and alert info
-    rca_report = state.get("rca_report", "")
+    rca_report: str = str(state.get("rca_report", ""))
     alert_info = state.get("alert_info", {})
 
     if not rca_report:
         logger.warning("No RCA report to save")
 
-        error_message = HumanMessage(
-            content="**Memory Commit:** Error - No RCA report available",
-            name="memory"
-        )
+        error_message = HumanMessage(content="**Memory Commit:** Error - No RCA report available", name="memory")
 
         return {"messages": [error_message]}
 
@@ -245,8 +216,8 @@ def memory_commit_node(state: AlertTeamState) -> Dict[str, Any]:
 
         success_message = HumanMessage(
             content="**Memory Commit:** ✅ RCA successfully saved to long-term memory. "
-                    "This incident will be recalled for future similar alerts.",
-            name="memory"
+            "This incident will be recalled for future similar alerts.",
+            name="memory",
         )
 
         return {"messages": [success_message]}
@@ -254,8 +225,7 @@ def memory_commit_node(state: AlertTeamState) -> Dict[str, Any]:
         logger.error("Failed to save RCA to memory")
 
         failure_message = HumanMessage(
-            content="**Memory Commit:** ❌ Failed to save RCA to memory. Check logs for details.",
-            name="memory"
+            content="**Memory Commit:** ❌ Failed to save RCA to memory. Check logs for details.", name="memory"
         )
 
         return {"messages": [failure_message]}

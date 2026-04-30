@@ -5,9 +5,12 @@ This module defines the AlertTeamState TypedDict that is passed between all node
 in the LangGraph workflow. It tracks the conversation history, alert information,
 historical context from ChromaDB, and routing decisions.
 """
-from typing import TypedDict, Annotated, Sequence, Dict
-from langchain_core.messages import BaseMessage
+
 import operator
+from collections.abc import Sequence
+from typing import Annotated, Any, TypedDict
+
+from langchain_core.messages import BaseMessage
 
 
 class AlertTeamState(TypedDict):
@@ -30,7 +33,7 @@ class AlertTeamState(TypedDict):
     """
 
     messages: Annotated[Sequence[BaseMessage], operator.add]
-    alert_info: dict
+    alert_info: dict[str, Any]
     historical_context: str
     next_worker: str
-    agent_consultation_count: Dict[str, int]
+    agent_consultation_count: dict[str, int]

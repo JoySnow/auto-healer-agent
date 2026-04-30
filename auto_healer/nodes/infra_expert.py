@@ -7,14 +7,16 @@ check_container_health tool to inspect container state and resource usage.
 
 System Prompt Focus: "You are a DevOps and Kubernetes Specialist."
 """
-from typing import Dict, Any
+
 import logging
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from typing import Any
+
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.prebuilt import create_react_agent
 
+from auto_healer.llm_config import get_llm
 from auto_healer.state import AlertTeamState
 from auto_healer.tools.docker_tools import check_container_health
-from auto_healer.llm_config import get_llm
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +65,7 @@ Provide your analysis as a structured summary that the Supervisor can use.
 """
 
 
-def infra_expert_node(state: AlertTeamState) -> Dict[str, Any]:
+def infra_expert_node(state: AlertTeamState) -> dict[str, Any]:
     """
     Infrastructure Expert Agent - Diagnoses container and infrastructure issues.
 
@@ -112,14 +114,12 @@ Task: Check the infrastructure health for this service and identify any resource
 Use the check_container_health tool to inspect the container state."""
 
     # Create ReAct agent
-    agent = create_react_agent(llm, tools, prompt=system_message)
+    agent = create_react_agent(llm, tools, prompt=system_message)  # type: ignore[arg-type]
 
     try:
         # Execute agent - prepare initial messages
         agent_input = {
-            "messages": [
-                HumanMessage(content=f"Investigate infrastructure issues for {service} ({status_code} error)")
-            ]
+            "messages": [HumanMessage(content=f"Investigate infrastructure issues for {service} ({status_code} error)")]
         }
 
         # Execute with recursion limit
@@ -130,24 +130,22 @@ Use the check_container_health tool to inspect the container state."""
         # Extract final message
         if result and "messages" in result:
             final_message = result["messages"][-1]
-            analysis_content = final_message.content if hasattr(final_message, 'content') else str(final_message)
+            analysis_content = final_message.content if hasattr(final_message, "content") else str(final_message)
             logger.debug(f"Result: {analysis_content[:200]}...")
 
             # Create response message
             response_message = AIMessage(
-                content=f"**Infrastructure Expert Analysis:**\n\n{analysis_content}",
-                name="infra_expert"
+                content=f"**Infrastructure Expert Analysis:**\n\n{analysis_content}", name="infra_expert"
             )
 
-            return {
-                "messages": [response_message],
-                "agent_consultation_count": agent_counts
-            }
+            return {"messages": [response_message], "agent_consultation_count": agent_counts}
         else:
             logger.warning("No messages in result")
             return {
-                "messages": [AIMessage(content="**Infrastructure Expert**: No analysis generated", name="infra_expert")],
-                "agent_consultation_count": agent_counts
+                "messages": [
+                    AIMessage(content="**Infrastructure Expert**: No analysis generated", name="infra_expert")
+                ],
+                "agent_consultation_count": agent_counts,
             }
 
     except Exception as e:
@@ -156,10 +154,7 @@ Use the check_container_health tool to inspect the container state."""
         # Return error message for reflection
         error_message = AIMessage(
             content=f"**Infrastructure Expert Error:**\n\nEncountered an error during analysis: {str(e)}\n\nPlease route to another specialist or conclude investigation.",
-            name="infra_expert"
+            name="infra_expert",
         )
 
-        return {
-            "messages": [error_message],
-            "agent_consultation_count": agent_counts
-        }
+        return {"messages": [error_message], "agent_consultation_count": agent_counts}

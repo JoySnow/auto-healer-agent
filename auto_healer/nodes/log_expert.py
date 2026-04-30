@@ -7,14 +7,16 @@ retrieve container logs and parse Python tracebacks.
 
 System Prompt Focus: "You are a Senior Backend Software Engineer analyzing logs."
 """
-from typing import Dict, Any
+
 import logging
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from typing import Any
+
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.prebuilt import create_react_agent
 
+from auto_healer.llm_config import get_llm
 from auto_healer.state import AlertTeamState
 from auto_healer.tools.docker_tools import fetch_service_logs
-from auto_healer.llm_config import get_llm
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +61,7 @@ Provide your analysis as a structured summary that the Supervisor can use.
 """
 
 
-def log_expert_node(state: AlertTeamState) -> Dict[str, Any]:
+def log_expert_node(state: AlertTeamState) -> dict[str, Any]:
     """
     Log Expert Agent - Analyzes application logs and stack traces.
 
@@ -108,15 +110,11 @@ Task: Analyze the logs for this service and identify the root cause of the error
 Use the fetch_service_logs tool to retrieve recent logs."""
 
     # Create ReAct agent
-    agent = create_react_agent(llm, tools, prompt=system_message)
+    agent = create_react_agent(llm, tools, prompt=system_message)  # type: ignore[arg-type]
 
     try:
         # Execute agent - prepare initial messages
-        agent_input = {
-            "messages": [
-                HumanMessage(content=f"Investigate the {status_code} error in {service}")
-            ]
-        }
+        agent_input = {"messages": [HumanMessage(content=f"Investigate the {status_code} error in {service}")]}
 
         # Execute with recursion limit
         result = agent.invoke(agent_input, {"recursion_limit": 10})
@@ -126,24 +124,18 @@ Use the fetch_service_logs tool to retrieve recent logs."""
         # Extract final message
         if result and "messages" in result:
             final_message = result["messages"][-1]
-            analysis_content = final_message.content if hasattr(final_message, 'content') else str(final_message)
+            analysis_content = final_message.content if hasattr(final_message, "content") else str(final_message)
             logger.debug(f"Result: {analysis_content[:200]}...")
 
             # Create response message
-            response_message = AIMessage(
-                content=f"**Log Expert Analysis:**\n\n{analysis_content}",
-                name="log_expert"
-            )
+            response_message = AIMessage(content=f"**Log Expert Analysis:**\n\n{analysis_content}", name="log_expert")
 
-            return {
-                "messages": [response_message],
-                "agent_consultation_count": agent_counts
-            }
+            return {"messages": [response_message], "agent_consultation_count": agent_counts}
         else:
             logger.warning("No messages in result")
             return {
                 "messages": [AIMessage(content="**Log Expert**: No analysis generated", name="log_expert")],
-                "agent_consultation_count": agent_counts
+                "agent_consultation_count": agent_counts,
             }
 
     except Exception as e:
@@ -152,10 +144,7 @@ Use the fetch_service_logs tool to retrieve recent logs."""
         # Return error message for reflection
         error_message = AIMessage(
             content=f"**Log Expert Error:**\n\nEncountered an error during analysis: {str(e)}\n\nPlease route to another specialist or retry.",
-            name="log_expert"
+            name="log_expert",
         )
 
-        return {
-            "messages": [error_message],
-            "agent_consultation_count": agent_counts
-        }
+        return {"messages": [error_message], "agent_consultation_count": agent_counts}

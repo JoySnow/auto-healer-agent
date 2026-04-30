@@ -8,18 +8,19 @@ into the infrastructure.
 CRITICAL: All tools MUST have comprehensive docstrings with type hints.
 The LLM relies 100% on these docstrings to understand how to use the tools.
 """
-from typing import Dict, Any
+
 import logging
+from typing import Any
 
 try:
     import docker
-    from docker.errors import DockerException, NotFound, APIError
+    from docker.errors import APIError, DockerException, NotFound
+
     DOCKER_AVAILABLE = True
 except ImportError:
     DOCKER_AVAILABLE = False
     logging.warning("Docker SDK not installed. Tools will return error messages.")
 
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,8 @@ def fetch_service_logs(service_name: str, tail_lines: int = 100) -> str:
         container = client.containers.get(service_name)
 
         # Fetch logs (tail last N lines)
-        logs = container.logs(tail=tail_lines, timestamps=True).decode('utf-8')
+        logs_bytes = container.logs(tail=tail_lines, timestamps=True)
+        logs: str = logs_bytes.decode("utf-8")
 
         logger.info(f"Successfully fetched {tail_lines} log lines from {service_name}")
 
@@ -95,7 +97,7 @@ def fetch_service_logs(service_name: str, tail_lines: int = 100) -> str:
         return f"ERROR: {error_msg}"
 
 
-def check_container_health(service_name: str) -> Dict[str, Any]:
+def check_container_health(service_name: str) -> dict[str, Any]:
     """
     Check the health status and resource usage of a Docker container.
 
@@ -140,49 +142,43 @@ def check_container_health(service_name: str) -> Dict[str, Any]:
 
         # Get container state
         container.reload()  # Refresh container data
-        state = container.attrs['State']
+        state = container.attrs["State"]
 
         # Get restart count
-        restart_count = container.attrs['RestartCount']
+        restart_count = container.attrs["RestartCount"]
 
         # Basic health info
         health_info = {
-            "status": state['Status'],
-            "exit_code": state.get('ExitCode'),
-            "started_at": state.get('StartedAt'),
-            "finished_at": state.get('FinishedAt'),
+            "status": state["Status"],
+            "exit_code": state.get("ExitCode"),
+            "started_at": state.get("StartedAt"),
+            "finished_at": state.get("FinishedAt"),
             "restart_count": restart_count,
-            "oom_killed": state.get('OOMKilled', False),
+            "oom_killed": state.get("OOMKilled", False),
         }
 
         # Get resource stats if container is running
-        if state['Status'] == 'running':
+        if state["Status"] == "running":
             try:
                 stats = container.stats(stream=False)
 
                 # Calculate memory usage
-                memory_usage = stats['memory_stats'].get('usage', 0)
-                memory_limit = stats['memory_stats'].get('limit', 0)
+                memory_usage = stats["memory_stats"].get("usage", 0)
+                memory_limit = stats["memory_stats"].get("limit", 0)
 
-                health_info.update({
-                    "memory_usage": f"{memory_usage / (1024**2):.2f}MB",
-                    "memory_limit": f"{memory_limit / (1024**2):.2f}MB",
-                    "cpu_usage": "N/A"  # CPU calculation is complex, simplified for MVP
-                })
+                health_info.update(
+                    {
+                        "memory_usage": f"{memory_usage / (1024**2):.2f}MB",
+                        "memory_limit": f"{memory_limit / (1024**2):.2f}MB",
+                        "cpu_usage": "N/A",  # CPU calculation is complex, simplified for MVP
+                    }
+                )
 
             except Exception as e:
                 logger.warning(f"Could not fetch stats for {service_name}: {e}")
-                health_info.update({
-                    "memory_usage": "N/A",
-                    "memory_limit": "N/A",
-                    "cpu_usage": "N/A"
-                })
+                health_info.update({"memory_usage": "N/A", "memory_limit": "N/A", "cpu_usage": "N/A"})
         else:
-            health_info.update({
-                "memory_usage": "N/A (not running)",
-                "memory_limit": "N/A",
-                "cpu_usage": "N/A"
-            })
+            health_info.update({"memory_usage": "N/A (not running)", "memory_limit": "N/A", "cpu_usage": "N/A"})
 
         logger.info(f"Successfully checked health for {service_name}: status={health_info['status']}")
 

@@ -10,14 +10,15 @@ Key Functions:
 - query_past_incidents(): Semantic search for similar incidents (RAG recall)
 - save_incident(): Store approved RCA reports to memory
 """
-from typing import Dict, List, Optional
+
 import logging
 from datetime import datetime
-import json
+from typing import Any
 
 try:
     import chromadb
     from chromadb.config import Settings
+
     CHROMADB_AVAILABLE = True
 except ImportError:
     CHROMADB_AVAILABLE = False
@@ -26,8 +27,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Global ChromaDB client and collection (initialized once)
-_chroma_client: Optional[chromadb.Client] = None
-_collection: Optional[chromadb.Collection] = None
+_chroma_client: Any | None = None  # chromadb.Client not importable for type hints
+_collection: Any | None = None  # chromadb.Collection not importable for type hints
 
 COLLECTION_NAME = "incident_history"
 PERSIST_DIRECTORY = ".chromadb"
@@ -56,20 +57,18 @@ def initialize_chromadb() -> bool:
 
     try:
         # Initialize ChromaDB client with persistence
-        _chroma_client = chromadb.Client(Settings(
-            persist_directory=PERSIST_DIRECTORY,
-            anonymized_telemetry=False
-        ))
+        _chroma_client = chromadb.Client(Settings(persist_directory=PERSIST_DIRECTORY, anonymized_telemetry=False))
 
         # Get or create collection
         # Note: ChromaDB will use default embedding function if not specified
         _collection = _chroma_client.get_or_create_collection(
-            name=COLLECTION_NAME,
-            metadata={"description": "Historical incident RCA reports for auto-healer agent"}
+            name=COLLECTION_NAME, metadata={"description": "Historical incident RCA reports for auto-healer agent"}
         )
 
         incident_count = _collection.count()
-        logger.info(f"ChromaDB initialized successfully. Collection '{COLLECTION_NAME}' has {incident_count} incidents.")
+        logger.info(
+            f"ChromaDB initialized successfully. Collection '{COLLECTION_NAME}' has {incident_count} incidents."
+        )
 
         return True
 
@@ -78,7 +77,7 @@ def initialize_chromadb() -> bool:
         return False
 
 
-def query_past_incidents(alert_info: Dict, top_k: int = 3) -> str:
+def query_past_incidents(alert_info: dict[str, Any], top_k: int = 3) -> str:
     """
     Query ChromaDB for similar past incidents using semantic search (RAG).
 
@@ -124,27 +123,28 @@ def query_past_incidents(alert_info: Dict, top_k: int = 3) -> str:
         # Query ChromaDB for similar incidents
         results = _collection.query(
             query_texts=[query_text],
-            n_results=min(top_k, _collection.count())  # Don't query more than available
+            n_results=min(top_k, _collection.count()),  # Don't query more than available
         )
 
         # Check if any results found
-        if not results['documents'] or not results['documents'][0]:
+        documents = results.get("documents")
+        metadatas = results.get("metadatas")
+
+        if not documents or not documents[0] or not metadatas or not metadatas[0]:
             logger.info("No similar past incidents found in memory.")
             return ""
 
         # Format results
         incidents = []
-        for idx, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0]), 1):
-            timestamp = metadata.get('timestamp', 'unknown date')
-            service_name = metadata.get('service', 'unknown service')
-            status = metadata.get('status_code', 'unknown')
+        for idx, (doc, metadata) in enumerate(zip(documents[0], metadatas[0], strict=False), 1):
+            timestamp = metadata.get("timestamp", "unknown date")
+            service_name = metadata.get("service", "unknown service")
+            status = metadata.get("status_code", "unknown")
 
             # Truncate RCA if too long (keep first 200 chars)
             rca_summary = doc[:200] + "..." if len(doc) > 200 else doc
 
-            incidents.append(
-                f"{idx}) [{timestamp}] {service_name} {status} - {rca_summary}"
-            )
+            incidents.append(f"{idx}) [{timestamp}] {service_name} {status} - {rca_summary}")
 
         formatted_context = "Similar past incidents:\n" + "\n".join(incidents)
 
@@ -157,7 +157,7 @@ def query_past_incidents(alert_info: Dict, top_k: int = 3) -> str:
         return ""
 
 
-def save_incident(rca_report: str, alert_info: Dict) -> bool:
+def save_incident(rca_report: str, alert_info: dict[str, Any]) -> bool:
     """
     Save a human-approved RCA report to ChromaDB for future reference.
 
@@ -186,22 +186,20 @@ def save_incident(rca_report: str, alert_info: Dict) -> bool:
 
     try:
         # Generate unique ID for this incident
-        incident_id = f"{alert_info.get('service', 'unknown')}_{alert_info.get('timestamp', datetime.utcnow().isoformat())}"
+        incident_id = (
+            f"{alert_info.get('service', 'unknown')}_{alert_info.get('timestamp', datetime.utcnow().isoformat())}"
+        )
 
         # Extract metadata
         metadata = {
             "service": alert_info.get("service", "unknown"),
             "status_code": alert_info.get("status_code", 0),
             "timestamp": alert_info.get("timestamp", datetime.utcnow().isoformat()),
-            "chaos_type": alert_info.get("chaos_type", "none")
+            "chaos_type": alert_info.get("chaos_type", "none"),
         }
 
         # Add to ChromaDB
-        _collection.add(
-            ids=[incident_id],
-            documents=[rca_report],
-            metadatas=[metadata]
-        )
+        _collection.add(ids=[incident_id], documents=[rca_report], metadatas=[metadata])
 
         logger.info(f"Successfully saved incident to memory: {incident_id}")
 
@@ -212,7 +210,7 @@ def save_incident(rca_report: str, alert_info: Dict) -> bool:
         return False
 
 
-def get_memory_stats() -> Dict:
+def get_memory_stats() -> dict[str, Any]:
     """
     Get statistics about the memory database.
 
@@ -226,11 +224,7 @@ def get_memory_stats() -> Dict:
 
     try:
         count = _collection.count()
-        return {
-            "collection_name": COLLECTION_NAME,
-            "total_incidents": count,
-            "persist_directory": PERSIST_DIRECTORY
-        }
+        return {"collection_name": COLLECTION_NAME, "total_incidents": count, "persist_directory": PERSIST_DIRECTORY}
     except Exception as e:
         logger.error(f"Error getting memory stats: {str(e)}")
         return {"error": str(e)}
