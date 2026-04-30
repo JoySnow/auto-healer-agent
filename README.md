@@ -20,21 +20,49 @@ Auto-Healer Agent is an open-source AI system that autonomously troubleshoots an
 
 ## Architecture
 
-```
-Alert → Memory Recall → Supervisor → Workers (Log/Infra) → Supervisor Synthesis → HITL → Memory Commit
+### High-Level Workflow
+
+```mermaid
+graph LR
+    A[Alert Received] --> B[Memory Recall]
+    B --> C[Supervisor Agent]
+    C -->|500 Error| D[Log Expert]
+    C -->|502/504 Error| E[Infra Expert]
+    D --> C
+    E --> C
+    C -->|Investigation Complete| F[Human Approval HITL]
+    F -->|Approved| G[Memory Commit]
+    F -->|Rejected| H[End]
+    G --> I[End]
 ```
 
-**Agents:**
-- **Supervisor Agent**: Central router for task delegation
-- **Log Expert Agent**: Analyzes application logs and stack traces
-- **Infra Expert Agent**: Checks container health and infrastructure state
+### Agent Specialization
 
-**Tech Stack:**
-- LangGraph for workflow orchestration
-- Ollama with qwen2.5:14b (local LLM)
-- ChromaDB for vector memory storage
-- FastAPI for dummy microservices
-- Docker/Podman for containerization
+**Supervisor Agent** (Router)
+- Analyzes alert context and historical patterns
+- Routes to appropriate specialist
+- Uses Pydantic structured outputs (prevents hallucination)
+- Enforces per-agent consultation budgets
+
+**Log Expert Agent** (Code-Level Debugging)
+- Fetches container logs via Docker SDK
+- Analyzes Python tracebacks and stack traces
+- Identifies code bugs (ZeroDivisionError, KeyError, etc.)
+- Reports file:line location of errors
+
+**Infra Expert Agent** (Infrastructure Diagnosis)
+- Checks container health and resource usage
+- Detects OOM kills (exit code 137)
+- Monitors restart counts and crashes
+- Identifies infrastructure failures
+
+### Tech Stack
+- **Orchestration**: LangGraph state machine
+- **LLM**: Ollama with qwen2.5:14b (14B parameters, local)
+- **Memory**: ChromaDB vector database (RAG)
+- **Tools**: Docker SDK for Python
+- **Services**: FastAPI microservices
+- **Containerization**: Docker/Podman
 
 ## Quick Start
 
@@ -195,6 +223,59 @@ See [docs/BLUEPRINT.md](docs/BLUEPRINT.md) for the complete development plan and
 
 **Performance**: Apple Silicon's unified memory allows the entire model and KV cache to reside in VRAM, eliminating inference bottlenecks.
 
+## Troubleshooting
+
+### Common Issues
+
+**Q: LLM errors or "connection refused"**
+```bash
+# Check if Ollama is running
+ollama serve
+
+# Check if model is available
+ollama list
+
+# Pull model if missing
+ollama pull qwen2.5:14b
+```
+
+**Q: Docker/Podman errors "container not found"**
+```bash
+# Check if services are running
+podman-compose ps
+
+# Restart services if needed
+podman-compose down
+podman-compose up -d --build
+```
+
+**Q: ChromaDB "collection not found" or memory errors**
+```bash
+# ChromaDB persists to .chromadb/ directory
+# Delete to reset memory
+rm -rf .chromadb/
+```
+
+**Q: Agent loops infinitely or times out**
+- Check agent consultation budgets (max 3 per agent)
+- Increase recursion limit: `--max-iterations 20`
+- Review logs for circular reasoning patterns
+
+**Q: Context window truncation (agent misses errors in logs)**
+- Verify `num_ctx=16384` in `llm_config.py`
+- Default 2048 will silently truncate 100-line logs
+- Check Ollama model configuration
+
+**Q: Pre-commit hooks fail**
+```bash
+# Reinstall pre-commit hooks
+pre-commit clean
+pre-commit install
+
+# Run manually
+pre-commit run --all-files
+```
+
 ## Contributing
 
 This is a learning project demonstrating agentic design patterns. Contributions are welcome!
@@ -204,6 +285,12 @@ This is a learning project demonstrating agentic design patterns. Contributions 
 3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+**Development Guidelines:**
+- Run tests: `pytest tests/`
+- Type check: `mypy auto_healer/`
+- Format code: `ruff format auto_healer/`
+- Lint: `ruff check auto_healer/ --fix`
 
 ## License
 
@@ -217,10 +304,17 @@ MIT License - see LICENSE file for details
 
 ## Status
 
-🚧 **Work in Progress** 🚧
+✨ **Phase 5: Production Polish** ✨
 
-- ✅ Phase 1: Infrastructure & Chaos Mock - Complete
-- ✅ Phase 2: Perception, Tools & Memory Layer - Complete
-- ⏳ Phase 3: Core Orchestration (LangGraph) - In Progress
-- ⏳ Phase 4: Integration & HITL - Pending
-- ⏳ Phase 5: Polish & Documentation - Pending
+- ✅ Phase 1: Infrastructure & Chaos Mock - **Complete**
+- ✅ Phase 2: Perception, Tools & Memory Layer - **Complete**
+- ✅ Phase 3: Core Orchestration (LangGraph) - **Complete**
+- ✅ Phase 4: Integration & HITL - **Complete**
+- 🔄 Phase 5: Polish & Documentation - **In Progress**
+  - ✅ Terminal UI with Rich library
+  - ✅ Type checking (mypy)
+  - ✅ Unit tests (pytest, 41 tests passing)
+  - ✅ Code formatting (ruff)
+  - ✅ Pre-commit hooks
+  - ✅ Comprehensive documentation
+  - 📚 Educational lesson series (5 phases)

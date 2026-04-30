@@ -1,0 +1,46 @@
+# Pre-commit hooks configuration
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+#
+# Note: Run mypy separately with: mypy auto_healer/
+# Pre-commit mypy can have dependency conflicts, so we keep it as a manual step
+
+repos:
+  # Ruff - Fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.0
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+        name: ruff lint
+      # Run the formatter
+      - id: ruff-format
+        name: ruff format
+
+  # General hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+        name: trim trailing whitespace
+        exclude: ^docs/lessons/
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+        name: fix end of files
+      # Check for files that would conflict on case-insensitive filesystems
+      - id: check-case-conflict
+        name: check for case conflicts
+      # Check for merge conflicts
+      - id: check-merge-conflict
+        name: check for merge conflicts
+      # Check YAML syntax
+      - id: check-yaml
+        name: check yaml syntax
+      # Check TOML syntax
+      - id: check-toml
+        name: check toml syntax
+      # Check JSON syntax
+      - id: check-json
+        name: check json syntax
