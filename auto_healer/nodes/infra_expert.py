@@ -105,7 +105,7 @@ Task: Check the infrastructure health for this service and identify any resource
 Use the check_container_health tool to inspect the container state."""
 
     # Create ReAct agent
-    agent = create_react_agent(llm, tools, state_modifier=system_message)
+    agent = create_react_agent(llm, tools, prompt=system_message)
 
     try:
         # Execute agent - prepare initial messages

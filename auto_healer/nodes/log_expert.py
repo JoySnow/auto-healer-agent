@@ -101,7 +101,7 @@ Task: Analyze the logs for this service and identify the root cause of the error
 Use the fetch_service_logs tool to retrieve recent logs."""
 
     # Create ReAct agent
-    agent = create_react_agent(llm, tools, state_modifier=system_message)
+    agent = create_react_agent(llm, tools, prompt=system_message)
 
     try:
         # Execute agent - prepare initial messages
